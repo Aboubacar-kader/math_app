@@ -5,7 +5,7 @@ Gère l'indexation et la recherche avec distinction knowledge_base / user_upload
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from typing import List, Dict, Any, Optional
 import uuid
 from config.settings import settings

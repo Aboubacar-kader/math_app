@@ -5,7 +5,7 @@ Utilise HuggingFace sentence-transformers pour les embeddings (local, gratuit).
 """
 
 import requests
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from typing import Optional, Tuple
 from config.settings import settings
 
