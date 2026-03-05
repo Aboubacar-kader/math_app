@@ -19,7 +19,6 @@ qdrant-client==1.9.1
 # Embeddings (local, sans GPU)
 # =========================
 sentence-transformers>=2.2.0
-tiktoken==0.7.0
 
 # =========================
 # Document Processing
