@@ -1,0 +1,44 @@
+# ========================
+# Environnement Python
+# ========================
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# ========================
+# Données volumineuses
+# ========================
+data/vectorstore/*
+data/uploads/*
+data/conversations/*
+data/cache/*
+data/knowledge_base/*
+# Garder les dossiers vides (placeholders)
+!data/vectorstore/.gitkeep
+!data/uploads/.gitkeep
+!data/conversations/.gitkeep
+!data/cache/.gitkeep
+!data/knowledge_base/.gitkeep
+
+# ========================
+# Secrets & config locale
+# ========================
+.env
+
+# ========================
+# IDE
+# ========================
+.vscode/
+.idea/
+*.swp
+
+# ========================
+# OS
+# ========================
+.DS_Store
+Thumbs.db

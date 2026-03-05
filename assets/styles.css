@@ -1,0 +1,1022 @@
+/* ============================================================
+   INTELLIMATH - STYLES COMPLETS
+   SANS BOUTON D'ENVOI - VERSION CLEAN
+   Kaydan Technology - Orange Spectaculaire #FF4500
+============================================================ */
+
+/* ============================================================
+   1. SIDEBAR - ALIGNEMENT PARFAIT
+============================================================ */
+
+/* Titres h1 et h2 - Même style */
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2 {
+    color: #FFFFFF !important;
+    font-weight: 900 !important;
+    font-size: 20px !important;
+    padding: 12px 16px !important;
+    margin: 16px 0 !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 3px solid rgba(255, 255, 255, 0.3) !important;
+    border-radius: 12px !important;
+    text-align: center !important;
+    letter-spacing: 1px !important;
+}
+
+/* CACHER LE LABEL "Navigation" */
+[data-testid="stSidebar"] .stRadio > label {
+    display: none !important;
+}
+
+[data-testid="stSidebar"] .stRadio > div {
+    gap: 8px !important;
+}
+
+[data-testid="stSidebar"] .stRadio label {
+    width: 100% !important;
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 2px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 10px !important;
+    padding: 12px 16px !important;
+    margin: 0 !important;
+    color: white !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+[data-testid="stSidebar"] .stRadio label:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.4) !important;
+    transform: translateX(4px) !important;
+}
+
+[data-testid="stSidebar"] .stRadio label[data-checked="true"] {
+    background: rgba(255, 255, 255, 0.25) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    font-weight: 700 !important;
+}
+
+/* Selectbox dans la sidebar */
+[data-testid="stSidebar"] .stSelectbox {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+[data-testid="stSidebar"] .stSelectbox > label {
+    display: none !important;
+}
+
+[data-testid="stSidebar"] .stSelectbox > div > div {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border: 2px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 10px !important;
+    color: white !important;
+}
+
+/* Checkbox dans la sidebar */
+[data-testid="stSidebar"] .stCheckbox {
+    margin: 8px 0 !important;
+    padding: 0 !important;
+}
+
+[data-testid="stSidebar"] .stCheckbox label {
+    color: white !important;
+    font-weight: 500 !important;
+}
+
+/* Couleur de fond sidebar */
+[data-testid="stSidebar"] {
+    background: linear-gradient(160deg, #8B1A00 0%, #FF4500 55%, #FF8C00 100%) !important;
+}
+
+[data-testid="stSidebar"] > div:first-child {
+    background: linear-gradient(160deg, #8B1A00 0%, #FF4500 55%, #FF8C00 100%) !important;
+}
+
+
+/* ============================================================
+   2. BARRE DE RECHERCHE MODERNE - SANS BOUTONS ENVOI/STOP
+============================================================ */
+
+/* CACHER TOUS LES BOUTONS D'ENVOI ET STOP */
+/* Cibler le dernier bouton de la ligne (celui d'envoi/stop) */
+div[data-testid="column"]:last-child .stButton,
+div[data-testid="column"]:nth-last-child(1) .stButton {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Les boutons de form sont gérés par le CSS injecté dans chaque composant */
+
+/* Boutons ronds pour les autres (➕ et 🎤) */
+div[data-testid="column"] .stButton button {
+    min-width: 44px !important;
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 50% !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 20px !important;
+    border: 2px solid #E8E8E8 !important;
+    background: white !important;
+    color: #666 !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+}
+
+div[data-testid="column"] .stButton button:hover {
+    background: #FFF0E8 !important;
+    border-color: #FF4500 !important;
+    color: #FF4500 !important;
+    transform: scale(1.08) !important;
+    box-shadow: 0 2px 8px rgba(255, 69, 0, 0.2) !important;
+}
+
+div[data-testid="column"] .stButton button:active {
+    transform: scale(0.95) !important;
+}
+
+/* Premier bouton (➕) - Style spécial */
+div[data-testid="column"]:first-child .stButton button {
+    background: #F5F5F5 !important;
+    font-size: 24px !important;
+    font-weight: bold !important;
+}
+
+div[data-testid="column"]:first-child .stButton button:hover {
+    background: #FF4500 !important;
+    border-color: #FF4500 !important;
+    color: white !important;
+    transform: scale(1.08) rotate(90deg) !important;
+}
+
+/* Bouton micro */
+div[data-testid="column"]:nth-last-child(2) .stButton button {
+    font-size: 22px !important;
+}
+
+/* Champs de texte arrondis */
+.stTextInput > div > div,
+.stTextArea > div > div {
+    border: 2px solid #E8E8E8 !important;
+    border-radius: 50px !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    background: white !important;
+}
+
+.stTextInput > div > div:hover,
+.stTextArea > div > div:hover {
+    border-color: #CCCCCC !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+}
+
+.stTextInput > div > div:focus-within,
+.stTextArea > div > div:focus-within {
+    border-color: #FF4500 !important;
+    box-shadow: 0 4px 12px rgba(255, 69, 0, 0.15) !important;
+}
+
+.stTextInput input,
+.stTextArea textarea {
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    font-size: 16px !important;
+    padding: 12px 24px !important;
+    background: transparent !important;
+    color: #2D2D2D !important;
+}
+
+.stTextInput input::placeholder,
+.stTextArea textarea::placeholder {
+    color: #999 !important;
+    font-weight: 400 !important;
+    opacity: 1 !important;
+}
+
+/* Labels cachés */
+.stTextInput > label,
+.stTextArea > label {
+    display: none !important;
+}
+
+/* Fix textarea multiline */
+.stTextArea textarea {
+    white-space: pre-wrap !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    width: 100% !important;
+}
+
+
+/* ============================================================
+   3. TAGS DE FICHIERS
+============================================================ */
+
+.file-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: white;
+    color: #FF4500;
+    border: 2px solid #FF4500;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 4px;
+    box-shadow: 0 2px 6px rgba(255, 69, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.file-tag:hover {
+    background: #FF4500;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(255, 69, 0, 0.25);
+}
+
+
+/* ============================================================
+   4. CARTES DE FORMULES - RÉFÉRENCE RAPIDE
+============================================================ */
+
+/* Grille de cartes - ESPACEMENT AMÉLIORÉ */
+.formula-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 32px 24px; /* 32px vertical, 24px horizontal */
+    margin: 40px 0;
+    padding: 0 8px;
+}
+
+/* Carte individuelle - HAUTEUR FIXE */
+.formula-card {
+    background: white;
+    border: 2px solid #E8E8E8;
+    border-radius: 16px;
+    padding: 24px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    position: relative;
+    overflow: hidden;
+    
+    /* HAUTEUR FIXE pour uniformité */
+    min-height: 280px;
+    max-height: 280px;
+    height: 280px;
+    
+    /* Flexbox pour organisation interne */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.formula-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, #FF8C00 0%, #FF4500 60%, #CC2800 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.formula-card:hover::before {
+    opacity: 1;
+}
+
+.formula-card:hover {
+    border-color: #FF4500;
+    box-shadow: 0 6px 24px rgba(255, 69, 0, 0.2);
+    transform: translateY(-6px);
+}
+
+/* Titre de la carte - HAUTEUR FIXE */
+.formula-title {
+    color: #FF4500;
+    font-weight: 700;
+    font-size: 17px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    line-height: 1.3;
+    
+    /* HAUTEUR FIXE - 2 lignes max */
+    min-height: 48px;
+    max-height: 48px;
+    overflow: hidden;
+}
+
+/* Partie texte du titre - ellipsis si trop long */
+.formula-title span:first-child {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2; /* Standard property for compatibility */
+    -webkit-box-orient: vertical;
+}
+
+/* Contenu de la formule - ZONE SCROLLABLE */
+.formula-content {
+    background: linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%);
+    padding: 16px;
+    border-radius: 12px;
+    font-family: 'Courier New', Consolas, Monaco, monospace;
+    font-size: 14px;
+    color: #2D2D2D;
+    border-left: 4px solid #FF4500;
+    line-height: 1.7;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+    font-weight: 500;
+    white-space: pre-line;
+    
+    /* ZONE FLEXIBLE avec scroll si nécessaire */
+    flex: 1;
+    min-height: 110px;
+    max-height: 130px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    
+    /* Scrollbar personnalisée */
+    scrollbar-width: thin;
+    scrollbar-color: #FF4500 #F1F1F1;
+}
+
+.formula-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.formula-content::-webkit-scrollbar-track {
+    background: #F1F1F1;
+    border-radius: 3px;
+}
+
+.formula-content::-webkit-scrollbar-thumb {
+    background: #FF4500;
+    border-radius: 3px;
+}
+
+.formula-content::-webkit-scrollbar-thumb:hover {
+    background: #CC2800;
+}
+
+/* Description de la formule - HAUTEUR FIXE */
+.formula-description {
+    color: #6C757D;
+    font-size: 13px;
+    margin-top: 12px;
+    font-style: italic;
+    line-height: 1.4;
+    
+    /* HAUTEUR FIXE - 2 lignes max */
+    min-height: 40px;
+    max-height: 40px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2; /* Standard property for compatibility */
+    -webkit-box-orient: vertical;
+}
+
+/* Badge de niveau */
+.level-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #FF8C00 0%, #FF4500 55%, #CC2800 100%);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 14px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(255, 69, 0, 0.3);
+    text-transform: uppercase;
+    flex-shrink: 0; /* Ne pas rétrécir */
+}
+
+/* En-tête de catégorie - ESPACEMENT AMÉLIORÉ */
+.category-header {
+    background: linear-gradient(135deg, #FF8C00 0%, #FF4500 55%, #CC2800 100%);
+    color: white;
+    padding: 18px 28px;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 22px;
+    margin: 56px 0 40px 0; /* Plus d'espace au-dessus et en-dessous */
+    box-shadow: 0 4px 16px rgba(255, 69, 0, 0.3);
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+
+/* Première catégorie - moins d'espace au-dessus */
+.category-header:first-of-type {
+    margin-top: 24px;
+}
+
+
+/* ============================================================
+   RESPONSIVE - AJUSTEMENTS POUR DIFFÉRENTES TAILLES D'ÉCRAN
+============================================================ */
+
+/* Tablettes et écrans moyens */
+@media (max-width: 1200px) {
+    .formula-grid {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 28px 20px;
+    }
+    
+    .formula-card {
+        min-height: 270px;
+        max-height: 270px;
+        height: 270px;
+    }
+}
+
+/* Petits écrans */
+@media (max-width: 768px) {
+    .formula-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    
+    .formula-card {
+        min-height: 260px;
+        max-height: 260px;
+        height: 260px;
+        padding: 20px;
+    }
+    
+    .formula-title {
+        font-size: 16px;
+        min-height: 44px;
+        max-height: 44px;
+    }
+    
+    .formula-content {
+        font-size: 13px;
+        padding: 14px;
+        min-height: 100px;
+        max-height: 120px;
+    }
+    
+    .category-header {
+        font-size: 20px;
+        padding: 16px 24px;
+        margin: 40px 0 32px 0;
+    }
+}
+
+/* Très petits écrans */
+@media (max-width: 480px) {
+    .formula-grid {
+        gap: 20px;
+    }
+    
+    .formula-card {
+        padding: 16px;
+    }
+}
+
+/* ============================================================
+   5. RESPONSIVE DESIGN
+============================================================ */
+
+/* Tablettes */
+@media (max-width: 1024px) {
+    .formula-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+    }
+    
+    .formula-card {
+        padding: 20px;
+    }
+    
+    .formula-title {
+        font-size: 16px;
+    }
+    
+    .category-header {
+        font-size: 20px;
+        padding: 16px 24px;
+    }
+}
+
+/* Mobiles */
+@media (max-width: 768px) {
+    .formula-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    div[data-testid="column"] .stButton button {
+        width: 40px !important;
+        height: 40px !important;
+        font-size: 18px !important;
+    }
+    
+    .stTextInput input {
+        font-size: 14px !important;
+        padding: 10px 16px !important;
+    }
+    
+    .formula-card {
+        padding: 16px;
+    }
+    
+    .formula-content {
+        font-size: 14px;
+        padding: 14px;
+    }
+    
+    .category-header {
+        font-size: 18px;
+        padding: 14px 20px;
+    }
+}
+
+
+/* ============================================================
+   6. AMÉLIORATIONS GÉNÉRALES
+============================================================ */
+
+/* Headers principaux */
+h1, h2, h3 {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+/* Boutons principaux (SAUF envoi/stop) */
+.stButton > button:not([kind="primary"]):not([kind="secondary"]) {
+    background: linear-gradient(135deg, #FF8C00 0%, #FF4500 55%, #CC2800 100%) !important;
+    color: white !important;
+    border: none !important;
+    padding: 12px 28px !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px rgba(255, 69, 0, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.stButton > button:not([kind="primary"]):not([kind="secondary"]):hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(255, 69, 0, 0.4) !important;
+}
+
+/* Expanders */
+.streamlit-expanderHeader {
+    background: #F8F9FA !important;
+    border-radius: 10px !important;
+    border: 2px solid #E8E8E8 !important;
+    font-weight: 600 !important;
+}
+
+.streamlit-expanderHeader:hover {
+    border-color: #FF4500 !important;
+    background: #FFF0E8 !important;
+}
+
+/* Dividers */
+hr {
+    margin: 24px 0 !important;
+    border-color: #E8E8E8 !important;
+}
+
+/* Success messages */
+.stSuccess {
+    background: #D4EDDA !important;
+    border-left: 4px solid #28A745 !important;
+    border-radius: 8px !important;
+    padding: 12px 16px !important;
+}
+
+/* Info messages */
+.stInfo {
+    background: #D1ECF1 !important;
+    border-left: 4px solid #17A2B8 !important;
+    border-radius: 8px !important;
+    padding: 12px 16px !important;
+}
+
+/* Warning messages */
+.stWarning {
+    background: #FFF3CD !important;
+    border-left: 4px solid #FFC107 !important;
+    border-radius: 8px !important;
+    padding: 12px 16px !important;
+}
+
+/* Error messages */
+.stError {
+    background: #F8D7DA !important;
+    border-left: 4px solid #DC3545 !important;
+    border-radius: 8px !important;
+    padding: 12px 16px !important;
+}
+
+
+/* ============================================================
+   7. SCROLLBAR PERSONNALISÉE
+============================================================ */
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #F1F1F1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #FF8C00 0%, #FF4500 50%, #CC2800 100%);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #FF4500 0%, #CC2800 50%, #991F00 100%);
+}
+
+
+
+/* ============================================================
+   CARTES DE THÉORÈMES ET PROPRIÉTÉS
+============================================================ */
+
+/* Grille de cartes */
+.theorems-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    gap: 32px 24px;
+    margin: 40px 0;
+    padding: 0 8px;
+}
+
+/* ============================================ */
+/* CARTE DE THÉORÈME (ORANGE) */
+/* ============================================ */
+.theorem-card {
+    background: white;
+    border: 3px solid #FF4500;
+    border-radius: 16px;
+    padding: 24px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(255, 69, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+    
+    min-height: 400px;
+    max-height: 400px;
+    height: 400px;
+    
+    display: flex;
+    flex-direction: column;
+}
+
+.theorem-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 100%;
+    background: linear-gradient(180deg, #FF8C00 0%, #FF4500 55%, #CC2800 100%);
+}
+
+.theorem-card:hover {
+    border-color: #CC2800;
+    box-shadow: 0 6px 24px rgba(255, 69, 0, 0.3);
+    transform: translateY(-6px);
+}
+
+/* ============================================ */
+/* CARTE DE PROPRIÉTÉ (VERT) */
+/* ============================================ */
+.property-card {
+    background: white;
+    border: 3px solid #10B981;
+    border-radius: 16px;
+    padding: 24px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+    position: relative;
+    overflow: hidden;
+    
+    min-height: 400px;
+    max-height: 400px;
+    height: 400px;
+    
+    display: flex;
+    flex-direction: column;
+}
+
+.property-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 100%;
+    background: linear-gradient(180deg, #10B981 0%, #059669 100%);
+}
+
+.property-card:hover {
+    border-color: #059669;
+    box-shadow: 0 6px 24px rgba(16, 185, 129, 0.3);
+    transform: translateY(-6px);
+}
+
+/* En-tête de la carte */
+.theorem-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    gap: 12px;
+}
+
+.theorem-title {
+    color: #1F2937;
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1.3;
+    flex: 1;
+}
+
+.badges {
+    display: flex;
+    gap: 6px;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+/* ============================================ */
+/* BADGE THÉORÈME (ORANGE) */
+/* ============================================ */
+.theorem-badge {
+    background: linear-gradient(135deg, #FF8C00 0%, #FF4500 55%, #CC2800 100%);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 6px rgba(255, 69, 0, 0.3);
+    white-space: nowrap;
+}
+
+/* Badge propriété (vert) */
+.property-badge {
+    background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+    white-space: nowrap;
+}
+
+/* Badge niveau (petit) */
+.level-badge-small {
+    background: linear-gradient(135deg, #FF8C00 0%, #FF4500 55%, #CC2800 100%);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 6px rgba(255, 69, 0, 0.3);
+    white-space: nowrap;
+}
+
+/* ============================================ */
+/* ÉNONCÉ DU THÉORÈME (bordure orange) */
+/* ============================================ */
+.theorem-enonce {
+    background: linear-gradient(135deg, #F9FAFB 0%, #FFFFFF 100%);
+    padding: 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    color: #374151;
+    line-height: 1.6;
+    margin-bottom: 12px;
+    border-left: 4px solid #FF4500;
+    font-style: italic;
+    
+    max-height: 90px;
+    overflow-y: auto;
+    
+    scrollbar-width: thin;
+    scrollbar-color: #FF4500 #F1F1F1;
+}
+
+.property-card .theorem-enonce {
+    border-left-color: #10B981;
+    scrollbar-color: #10B981 #F1F1F1;
+}
+
+.theorem-enonce::-webkit-scrollbar {
+    width: 5px;
+}
+
+.theorem-enonce::-webkit-scrollbar-track {
+    background: #F1F1F1;
+    border-radius: 3px;
+}
+
+.theorem-card .theorem-enonce::-webkit-scrollbar-thumb {
+    background: #FF4500;
+    border-radius: 3px;
+}
+
+.property-card .theorem-enonce::-webkit-scrollbar-thumb {
+    background: #10B981;
+    border-radius: 3px;
+}
+
+/* Hypothèse et Conclusion */
+.theorem-statement {
+    background: #F9FAFB;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 10px;
+    
+    max-height: 130px;
+    overflow-y: auto;
+    
+    scrollbar-width: thin;
+    scrollbar-color: #6B7280 #F1F1F1;
+}
+
+.theorem-statement::-webkit-scrollbar {
+    width: 5px;
+}
+
+.theorem-statement::-webkit-scrollbar-track {
+    background: #F1F1F1;
+    border-radius: 3px;
+}
+
+.theorem-statement::-webkit-scrollbar-thumb {
+    background: #6B7280;
+    border-radius: 3px;
+}
+
+.hypothesis,
+.conclusion {
+    margin: 8px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.statement-label {
+    font-weight: 700;
+    font-size: 12px;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ============================================ */
+/* TEXTE STATEMENT (bordure orange pour théorèmes) */
+/* ============================================ */
+.statement-text {
+    font-size: 13px;
+    color: #1F2937;
+    line-height: 1.5;
+    font-family: 'Courier New', monospace;
+    background: white;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border-left: 3px solid #FF4500;
+}
+
+.property-card .statement-text {
+    border-left-color: #10B981;
+}
+
+/* ============================================ */
+/* LÉGENDE (bordure orange pour théorèmes) */
+/* ============================================ */
+.theorem-legend {
+    background: #FFF5F0;
+    border-left: 3px solid #FF4500;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #555;
+    line-height: 1.5;
+    margin-top: auto;
+    
+    max-height: 60px;
+    overflow-y: auto;
+    
+    scrollbar-width: thin;
+    scrollbar-color: #FF4500 #F1F1F1;
+}
+
+.property-card .theorem-legend {
+    border-left-color: #10B981;
+    scrollbar-color: #10B981 #F1F1F1;
+}
+
+.theorem-legend::-webkit-scrollbar {
+    width: 5px;
+}
+
+.theorem-legend::-webkit-scrollbar-track {
+    background: #F1F1F1;
+    border-radius: 3px;
+}
+
+.theorem-card .theorem-legend::-webkit-scrollbar-thumb {
+    background: #FF4500;
+    border-radius: 3px;
+}
+
+.property-card .theorem-legend::-webkit-scrollbar-thumb {
+    background: #10B981;
+    border-radius: 3px;
+}
+
+.legend-icon {
+    color: #FF4500;
+    font-size: 14px;
+    margin-right: 6px;
+}
+
+/* ============================================ */
+/* EN-TÊTE DE CATÉGORIE POUR THÉORÈMES (orange) */
+/* ============================================ */
+.theorem-category-header {
+    background: linear-gradient(135deg, #FF8C00 0%, #FF4500 55%, #CC2800 100%);
+    color: white;
+    padding: 18px 28px;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 22px;
+    margin: 56px 0 40px 0;
+    box-shadow: 0 4px 16px rgba(255, 69, 0, 0.3);
+    letter-spacing: 0.5px;
+    text-align: center;
+}
+
+.theorem-category-header:first-of-type {
+    margin-top: 24px;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .theorems-grid {
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .theorems-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    
+    .theorem-card,
+    .property-card {
+        min-height: 380px;
+        max-height: 380px;
+        height: 380px;
+    }
+}
+
+
+
+
+/* ============================================================
+   FIN DES STYLES
+   IntelliMath - SANS BOUTONS ENVOI/STOP
+   Kaydan Technology
+============================================================ */
