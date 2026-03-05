@@ -10,11 +10,12 @@ from typing import Optional, Tuple
 from config.settings import settings
 
 
-def call_1minai(system_prompt: str, user_content: str) -> str:
+def call_1minai(system_prompt: str, user_content: str, retries: int = 2) -> str:
     """
     Appelle l'API 1min.ai avec system + user combinés.
-    Retourne le texte de la réponse.
+    Retourne le texte de la réponse. Retry automatique sur rate limit (429).
     """
+    import time
     url = f"{settings.MIN_AI_BASE_URL}/api/chat-with-ai"
     headers = {
         "Content-Type": "application/json",
@@ -30,10 +31,45 @@ def call_1minai(system_prompt: str, user_content: str) -> str:
             "webSearch": False,
         },
     }
-    response = requests.post(url, headers=headers, json=payload, timeout=60)
-    response.raise_for_status()
-    data = response.json()
-    return data["aiRecord"]["aiRecordDetail"]["resultObject"][0]
+
+    last_error = None
+    for attempt in range(retries + 1):
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=120)
+
+            # Rate limit → attendre et réessayer
+            if response.status_code == 429:
+                wait = 3 * (attempt + 1)
+                time.sleep(wait)
+                last_error = f"Rate limit (429) — tentative {attempt + 1}"
+                continue
+
+            response.raise_for_status()
+            data = response.json()
+
+            # Extraire le texte selon le format de la réponse
+            result_obj = data.get("aiRecord", {}).get("aiRecordDetail", {}).get("resultObject")
+            if isinstance(result_obj, list) and result_obj:
+                return result_obj[0]
+            elif isinstance(result_obj, str) and result_obj:
+                return result_obj
+            else:
+                raise ValueError(f"Format réponse inattendu : {str(data)[:300]}")
+
+        except requests.HTTPError as e:
+            last_error = f"HTTP {e.response.status_code}: {e.response.text[:200]}"
+            if attempt < retries:
+                time.sleep(2)
+                continue
+            break
+        except Exception as e:
+            last_error = str(e)
+            if attempt < retries:
+                time.sleep(2)
+                continue
+            break
+
+    raise RuntimeError(f"1min.ai API échouée après {retries + 1} tentatives : {last_error}")
 
 
 class LLMManager:

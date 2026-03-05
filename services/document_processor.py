@@ -5,8 +5,6 @@ Extrait le texte de différents formats de fichiers.
 
 import pdfplumber
 from docx import Document
-from PIL import Image
-import pytesseract
 import io
 from typing import List, Dict, Any, Optional
 import streamlit as st
@@ -179,59 +177,46 @@ class DocumentProcessor:
     
     def _extract_from_image(self, file) -> str:
         """
-        Pipeline image → texte structuré :
-          1. Pix2Text : OCR texte + formules LaTeX dans la même image
-          2. LLaMA 3  : reformate la transcription en énoncé propre
-          3. Tesseract : fallback texte pur si Pix2Text absent
+        Extraction via GPT-4o Vision (1min.ai) — aucun OCR local requis.
+        Envoie l'image en base64 directement à l'API.
         """
-        from config.settings import settings
+        import base64
+        import requests as _requests
         file_bytes = file.read()
-        raw_text = ""
 
-        # ── Étape 1 : Pix2Text — OCR texte + LaTeX ────────────────────────
+        # Encoder l'image en base64
+        b64_image = base64.b64encode(file_bytes).decode('utf-8')
+
         try:
-            from pix2text import Pix2Text
-            img = Image.open(io.BytesIO(file_bytes)).convert('RGB')
-            p2t = Pix2Text.from_config()
-            # recognize_page gère les pages mixtes (texte + formules)
-            result = p2t.recognize_page(img)
-            if isinstance(result, list):
-                # Chaque élément : {'type': 'text'|'isolated', 'text': '...'}
-                parts = []
-                for item in result:
-                    t = item.get('text', '') if isinstance(item, dict) else str(item)
-                    if t.strip():
-                        parts.append(t.strip())
-                raw_text = "\n\n".join(parts)
-            elif isinstance(result, str):
-                raw_text = result.strip()
-        except Exception as e:
-            st.warning(f"⚠️ Pix2Text indisponible : {e}")
-
-        # ── Étape 2 : GPT-4o (1min.ai) — structuration ────────────────────
-        if raw_text:
-            try:
-                system_prompt = (
-                    "Reformate cette transcription d'exercices mathématiques en énoncé "
-                    "clair et structuré : titres en gras, questions numérotées, "
-                    "formules lisibles (f(x) = ..., z1 = ...). "
-                    "Ne résous rien, reformate uniquement."
-                )
-                structured = call_1minai(system_prompt, f"Reformate :\n\n{raw_text}").strip()
-                if structured:
-                    return structured
-            except Exception:
-                pass
-            return raw_text  # GPT-4o échoue → retourner brut Pix2Text
-
-        # ── Étape 3 : Fallback Tesseract OCR ──────────────────────────────
-        try:
-            image = Image.open(io.BytesIO(file_bytes)).convert('L')
-            text = pytesseract.image_to_string(image, lang='fra', config='--psm 6')
+            url = f"{settings.MIN_AI_BASE_URL}/api/chat-with-ai"
+            headers = {
+                "Content-Type": "application/json",
+                "API-KEY": settings.MIN_AI_API_KEY,
+            }
+            payload = {
+                "type": "CHAT_WITH_AI",
+                "model": settings.MIN_AI_MODEL,
+                "promptObject": {
+                    "prompt": (
+                        "Transcris intégralement tout le texte et toutes les formules "
+                        "mathématiques de cette image. "
+                        "Garde la structure exacte de l'exercice : titres, numéros de questions, "
+                        "tableaux, formules (notation standard : f(x) = ...). "
+                        "Ne résous rien, transcris uniquement."
+                    ),
+                    "isMixed": True,
+                    "imageList": [b64_image],
+                    "webSearch": False,
+                },
+            }
+            response = _requests.post(url, headers=headers, json=payload, timeout=90)
+            response.raise_for_status()
+            data = response.json()
+            text = data["aiRecord"]["aiRecordDetail"]["resultObject"][0]
             if text.strip():
-                return text
+                return text.strip()
         except Exception as e:
-            st.warning(f"⚠️ OCR Tesseract échoué : {e}")
+            st.warning(f"⚠️ Extraction vision GPT-4o échouée : {e}")
 
         return "[Image - extraction non disponible]"
     

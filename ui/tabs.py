@@ -535,13 +535,22 @@ propriétés et théorèmes ci-dessous. Cite-les explicitement dans ta réponse 
 📚 Propriétés, théorèmes et définitions du cours :
 {rag_knowledge[:1200]}"""
 
+        # Quand un document est fourni, ne pas injecter l'historique (il confond le modèle)
+        conv_part_ex = "" if doc_context else conv_part
+
         exercise_system = f"""Tu es IntelliMath, professeur de mathématiques de lycée.{(' ' + level_info) if level_info else ''}
 
-⚠️ RÈGLE ABSOLUE N°1 — SUIS L'ÉNONCÉ À LA LETTRE :
-- Réponds UNIQUEMENT aux questions posées dans l'énoncé, dans leur ordre exact.
-- N'invente AUCUNE question, AUCUNE donnée, AUCUNE analyse non demandée.
-- Copie le numéro de chaque question EXACTEMENT comme il apparaît (1., 1.1., Partie A, etc.).
-- Si une question demande "Calculer f(0)", réponds UNIQUEMENT à "Calculer f(0)", rien d'autre.
+🚫 INTERDICTIONS ABSOLUES — à respecter SANS EXCEPTION :
+- JAMAIS dire "revenez avec les questions suivantes", "je continuerai", "dans un second temps" ou toute phrase similaire.
+- JAMAIS t'arrêter avant d'avoir résolu la DERNIÈRE question de l'énoncé.
+- JAMAIS demander à l'élève de poser une autre question pour continuer.
+- JAMAIS dire que tu n'as pas accès au document ou que tu as besoin d'autres informations.
+- Tu DOIS résoudre TOUTES les questions, TOUTES les parties, dans UNE SEULE réponse complète.
+
+⚠️ RÈGLE N°1 — SUIS L'ÉNONCÉ À LA LETTRE :
+- Lis attentivement l'énoncé fourni, identifie toutes les données et toutes les questions.
+- Réponds à CHAQUE question posée, dans leur ordre exact, de la première à la dernière.
+- Copie le numéro/intitulé de chaque question EXACTEMENT comme il apparaît (1., 1.1., Partie A, etc.).
 
 ⚠️ RÈGLE N°2 — CALCULS :
 - Symboles directement dans le texte : × ÷ ⇒ → ≤ ≥ ≠ ≈ ∞ ± ∈ ℝ
@@ -549,49 +558,41 @@ propriétés et théorèmes ci-dessous. Cite-les explicitement dans ta réponse 
 - Parenthèses OBLIGATOIRES autour de tout nombre négatif : f(−1) = 2 × (−1) − 3
 - Détaille chaque étape (× ÷ avant + −)
 
-⚠️ RÈGLE N°3 — TABLEAUX :
-Tableau de valeurs → TOUJOURS tableau markdown :
-| x | -2 | -1 | 0 | 1 | 3 |
-|---|---|---|---|---|---|
-| f(x) | -7 | -5 | -3 | 1 | 5 |
+⚠️ RÈGLE N°3 — TABLEAUX DE VALEURS :
+Si l'énoncé demande un tableau de valeurs, calcule CHAQUE valeur et affiche un tableau markdown COMPLET :
+| x   | v1 | v2 | v3 | v4 | v5 |
+|-----|----|----|----|----|-----|
+| f(x)| r1 | r2 | r3 | r4 | r5 |
+→ Remplace chaque cellule par la valeur calculée réelle. Ne laisse JAMAIS de case vide ou avec "?".
 {rag_section}
-Exemples de justifications correctes :
+⚠️ RÈGLE N°4 — JUSTIFICATIONS :
 ✓ "D'après la définition d'une fonction affine f(x) = ax + b, ici a = 2 et b = −3."
 ✓ "Par la propriété de croissance : comme a = 2 > 0, la fonction est croissante sur ℝ."
-✓ "D'après le théorème des valeurs intermédiaires, ..."
 
-FORMAT DE RÉPONSE :
-📋 **Données** : [reprend la fonction/données de l'énoncé]
-
+FORMAT OBLIGATOIRE (partie par partie, question par question) :
+📋 **Données** : [reprend les données clés de l'énoncé]
 ✏️ **Résolution**
-
-**[Numéro exact de la question]**
-[Réponse avec justification citant le cours si nécessaire]
-
-📝 **Conclusion** : [synthèse brève]{conv_part}"""
+**[Titre de la partie ou numéro de question]** [Réponse complète et détaillée]
+...jusqu'à la DERNIÈRE question.
+📝 **Conclusion** : [synthèse brève]{conv_part_ex}"""
 
         if doc_context:
-            # Découper le document en exercices individuels
             exercises = _split_into_exercises(doc_context)
         else:
             exercises = [(None, question)]
 
         if len(exercises) <= 1:
-            # Exercice unique ou question sans document
             titre, contenu = exercises[0]
-            exercise_text = contenu
-            # Si un document est fourni, le contenu EST l'exercice — pas besoin de répéter la question
+            exercise_text = contenu if doc_context else question
             if doc_context:
-                ordered = _build_ordered_prompt(exercise_text)
-                exercise_user = f"Résous chaque question dans l'ordre exact :\n\n{ordered}"
+                exercise_user = f"Voici l'exercice complet à résoudre :\n\n{exercise_text[:5000]}\n\nRésous TOUTES les questions dans l'ordre exact."
             else:
-                ordered = _build_ordered_prompt(question)
-                exercise_user = f"Résous chaque question dans l'ordre exact :\n\n{ordered}"
+                exercise_user = f"Voici l'exercice à résoudre :\n\n{exercise_text}\n\nRésous TOUTES les questions dans l'ordre exact."
 
             with st.spinner("✏️ Résolution en cours..."):
                 try:
                     response = fix_latex_for_streamlit(
-                        rag_service._call_ollama(exercise_system, exercise_user, long=True)
+                        rag_service._call_llm(exercise_system, exercise_user, long=True)
                     )
                     add_to_context(section_key, "assistant", response)
                 except Exception as e:
@@ -601,13 +602,15 @@ FORMAT DE RÉPONSE :
             all_responses = []
             n = len(exercises)
             for idx, (titre, contenu) in enumerate(exercises, 1):
+                import time as _time
                 label = titre if titre else f"Exercice {idx}"
                 with st.spinner(f"✏️ Résolution {idx}/{n} — {label}..."):
                     try:
-                        ordered = _build_ordered_prompt(contenu[:3000])
-                        exercise_user = f"Résous chaque question de {label} dans l'ordre exact :\n\n{ordered}"
+                        if idx > 1:
+                            _time.sleep(1)  # éviter le rate limiting de l'API
+                        exercise_user = f"Voici l'exercice à résoudre :\n\n{label}\n\n{contenu[:4000]}\n\nRésous TOUTES les questions dans l'ordre exact."
                         response = fix_latex_for_streamlit(
-                            rag_service._call_ollama(exercise_system, exercise_user, long=True)
+                            rag_service._call_llm(exercise_system, exercise_user, long=True)
                         )
                         all_responses.append(f"## {label}\n\n{response}")
                     except Exception as e:
@@ -630,7 +633,7 @@ Le document fourni est le contexte de référence. Lis-le entièrement et répon
             cours_user = f"Question : {question}\n\nDocument :\n{doc_context}"
             with st.spinner("📄 Analyse du document..."):
                 try:
-                    response = fix_latex_for_streamlit(rag_service._call_ollama(cours_system, cours_user))
+                    response = fix_latex_for_streamlit(rag_service._call_llm(cours_system, cours_user))
                     add_to_context(section_key, "assistant", response)
                 except Exception as e:
                     add_to_context(section_key, "assistant", f"❌ Erreur : {str(e)}")
