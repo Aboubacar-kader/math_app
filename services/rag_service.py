@@ -5,8 +5,8 @@ Format structuré avec vérifications anti-hallucination strictes.
 
 from typing import List, Tuple, Dict, Generator
 from core.vectorstore_manager import vectorstore_manager
+from core.llm_manager import call_1minai
 from config.settings import settings
-import ollama
 
 
 class RAGService:
@@ -14,53 +14,25 @@ class RAGService:
 
     def __init__(self):
         self.last_sources = []
-        self.ollama_model = settings.OLLAMA_MODEL
-
         self.min_relevance_score = 0.6
         self.max_documents = 3
 
-        # Options Ollama pour GTX 1660 Ti (6GB VRAM)
-        # num_ctx=4096 → KV cache ~536MB, stable sur 6GB avec Mistral 7B Q4 (~4.1GB)
-        self._ollama_options = {
-            'num_ctx': 4096,
-            'num_predict': 2048,
-        }
-
-        # Options pour la résolution d'exercices longs (réponse plus longue autorisée)
-        self._exercise_options = {
-            'num_ctx': 6144,
-            'num_predict': 3072,
-        }
-
     # ════════════════════════════════════════════════════════
-    # HELPER OLLAMA CHAT
+    # HELPER 1MIN.AI CHAT
     # ════════════════════════════════════════════════════════
 
-    def _call_ollama(self, system_prompt: str, user_content: str, stream: bool = False, long: bool = False):
+    def _call_llm(self, system_prompt: str, user_content: str, stream: bool = False, long: bool = False):
         """
-        Appelle Ollama via l'API chat (system/user roles séparés).
-        long=True : utilise _exercise_options pour les réponses longues (exercices complets).
+        Appelle l'API 1min.ai.
+        Si stream=True, simule le streaming en yielding la réponse complète.
         """
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": user_content}
-        ]
-        options = self._exercise_options if long else self._ollama_options
         if stream:
-            return ollama.chat(
-                model=self.ollama_model,
-                messages=messages,
-                stream=True,
-                options=options
-            )
+            def generate():
+                text = call_1minai(system_prompt, user_content)
+                yield text
+            return generate()
         else:
-            response = ollama.chat(
-                model=self.ollama_model,
-                messages=messages,
-                stream=False,
-                options=options
-            )
-            return response['message']['content']
+            return call_1minai(system_prompt, user_content)
 
     # ════════════════════════════════════════════════════════
     # REQUÊTES PRINCIPALES
@@ -92,14 +64,12 @@ class RAGService:
 
         if use_streaming:
             def generate():
-                response = self._call_ollama(system_prompt, user_content, stream=True)
-                for chunk in response:
-                    content = chunk.get('message', {}).get('content', '')
-                    if content:
-                        yield content
+                for chunk in self._call_llm(system_prompt, user_content, stream=True):
+                    if chunk:
+                        yield chunk
             return generate(), sources
         else:
-            text = self._call_ollama(system_prompt, user_content, stream=False)
+            text = self._call_llm(system_prompt, user_content, stream=False)
             return text, sources
 
     def query(
@@ -137,13 +107,11 @@ class RAGService:
         system_prompt, user_content = self._build_chat_prompt(question, context, filtered_docs)
 
         if use_streaming:
-            response = self._call_ollama(system_prompt, user_content, stream=True)
-            for chunk in response:
-                content = chunk.get('message', {}).get('content', '')
-                if content:
-                    yield content
+            for chunk in self._call_llm(system_prompt, user_content, stream=True):
+                if chunk:
+                    yield chunk
         else:
-            return self._call_ollama(system_prompt, user_content, stream=False)
+            return self._call_llm(system_prompt, user_content, stream=False)
 
     def get_last_sources(self) -> List[Dict]:
         """Récupère les sources de la dernière requête."""
@@ -212,7 +180,7 @@ DOMAINE : Mathématiques lycée français (Seconde, Première, Terminale) UNIQUE
 
 Commence ta réponse avec 📘 :"""
 
-        text = self._call_ollama(system_prompt, user_content)
+        text = self._call_llm(system_prompt, user_content)
         return text, sources
 
     def get_definition(self, term: str, level: str) -> str:
@@ -274,7 +242,7 @@ RÈGLES ABSOLUES :
 
 Commence la résolution :"""
 
-        text = self._call_ollama(system_prompt, user_content)
+        text = self._call_llm(system_prompt, user_content)
         return text, sources
 
     def solve_exercise(self, exercise: str, level: str) -> str:

@@ -8,11 +8,11 @@ from docx import Document
 from PIL import Image
 import pytesseract
 import io
-import ollama
 from typing import List, Dict, Any, Optional
 import streamlit as st
 from pathlib import Path
 from config.settings import settings
+from core.llm_manager import call_1minai
 
 class DocumentProcessor:
     """Processeur de documents multi-formats"""
@@ -208,34 +208,21 @@ class DocumentProcessor:
         except Exception as e:
             st.warning(f"⚠️ Pix2Text indisponible : {e}")
 
-        # ── Étape 2 : LLaMA 3 — structuration ─────────────────────────────
+        # ── Étape 2 : GPT-4o (1min.ai) — structuration ────────────────────
         if raw_text:
             try:
-                struct_resp = ollama.chat(
-                    model=settings.OLLAMA_MODEL,
-                    messages=[
-                        {
-                            'role': 'system',
-                            'content': (
-                                "Reformate cette transcription d'exercices mathématiques en énoncé "
-                                "clair et structuré : titres en gras, questions numérotées, "
-                                "formules lisibles (f(x) = ..., z1 = ...). "
-                                "Ne résous rien, reformate uniquement."
-                            ),
-                        },
-                        {
-                            'role': 'user',
-                            'content': f"Reformate :\n\n{raw_text}",
-                        },
-                    ],
-                    options={'num_ctx': 4096, 'num_predict': 2048},
+                system_prompt = (
+                    "Reformate cette transcription d'exercices mathématiques en énoncé "
+                    "clair et structuré : titres en gras, questions numérotées, "
+                    "formules lisibles (f(x) = ..., z1 = ...). "
+                    "Ne résous rien, reformate uniquement."
                 )
-                structured = struct_resp['message']['content'].strip()
+                structured = call_1minai(system_prompt, f"Reformate :\n\n{raw_text}").strip()
                 if structured:
                     return structured
             except Exception:
                 pass
-            return raw_text  # LLaMA 3 échoue → retourner brut Pix2Text
+            return raw_text  # GPT-4o échoue → retourner brut Pix2Text
 
         # ── Étape 3 : Fallback Tesseract OCR ──────────────────────────────
         try:

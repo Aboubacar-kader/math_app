@@ -1,104 +1,81 @@
 """
 Gestionnaire du modèle de langage (LLM).
-Initialise et gère les interactions avec Ollama.
-Inclut la classification intelligente des requêtes.
+Utilise l'API 1min.ai (GPT-4o) pour les réponses.
+Utilise HuggingFace sentence-transformers pour les embeddings (local, gratuit).
 """
 
-from langchain_ollama import ChatOllama, OllamaEmbeddings
+import requests
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from typing import Optional, Tuple
 from config.settings import settings
 
 
-class LLMManager:
-    """Gestionnaire centralisé du LLM avec classification intelligente"""
-    
-    def __init__(self):
-        self._llm: Optional[ChatOllama] = None
-        self._embeddings: Optional[OllamaEmbeddings] = None
-    
-    @property
-    def llm(self) -> ChatOllama:
-        """
-        Retourne l'instance du LLM (lazy loading).
-        Utilise le cache de Streamlit pour éviter de recharger le modèle.
-        """
-        if self._llm is None:
-            self._llm = self._initialize_llm()
-        return self._llm
-    
-    @property
-    def embeddings(self) -> OllamaEmbeddings:
-        """
-        Retourne l'instance des embeddings (lazy loading).
-        """
-        if self._embeddings is None:
-            self._embeddings = self._initialize_embeddings()
-        return self._embeddings
-    
-    @staticmethod
-    def _initialize_llm() -> ChatOllama:
-        """Initialise le modèle LLM (pas de cache Streamlit — évite les instances périmées)"""
-        return ChatOllama(
-            model=settings.OLLAMA_MODEL,
-            base_url=settings.OLLAMA_BASE_URL,
-            temperature=settings.OLLAMA_TEMPERATURE,
-            num_ctx=settings.OLLAMA_NUM_CTX,
-            num_predict=settings.OLLAMA_NUM_PREDICT,
-        )
+def call_1minai(system_prompt: str, user_content: str) -> str:
+    """
+    Appelle l'API 1min.ai avec system + user combinés.
+    Retourne le texte de la réponse.
+    """
+    url = f"{settings.MIN_AI_BASE_URL}/api/chat-with-ai"
+    headers = {
+        "Content-Type": "application/json",
+        "API-KEY": settings.MIN_AI_API_KEY,
+    }
+    full_prompt = f"{system_prompt}\n\n{user_content}" if system_prompt else user_content
+    payload = {
+        "type": "CHAT_WITH_AI",
+        "model": settings.MIN_AI_MODEL,
+        "promptObject": {
+            "prompt": full_prompt,
+            "isMixed": False,
+            "webSearch": False,
+        },
+    }
+    response = requests.post(url, headers=headers, json=payload, timeout=60)
+    response.raise_for_status()
+    data = response.json()
+    return data["aiRecord"]["aiRecordDetail"]["resultObject"][0]
 
-    @staticmethod
-    def _initialize_embeddings() -> OllamaEmbeddings:
-        """Initialise le modèle d'embeddings (pas de cache Streamlit)"""
-        return OllamaEmbeddings(
-            model=settings.OLLAMA_MODEL,
-            base_url=settings.OLLAMA_BASE_URL,
-        )
-    
+
+class LLMManager:
+    """Gestionnaire centralisé : embeddings locaux + appels 1min.ai"""
+
+    def __init__(self):
+        self._embeddings: Optional[HuggingFaceEmbeddings] = None
+
+    @property
+    def embeddings(self) -> HuggingFaceEmbeddings:
+        if self._embeddings is None:
+            self._embeddings = HuggingFaceEmbeddings(
+                model_name=settings.EMBEDDINGS_MODEL,
+                model_kwargs={"device": "cpu"},
+                encode_kwargs={"normalize_embeddings": True},
+            )
+        return self._embeddings
+
     def generate_response(self, prompt: str) -> str:
-        """
-        Génère une réponse à partir d'un prompt.
-        
-        Args:
-            prompt: Le prompt à envoyer au LLM
-            
-        Returns:
-            La réponse générée
-        """
         try:
-            response = self.llm.invoke(prompt)
-            return response.content
+            return call_1minai("", prompt)
         except Exception as e:
             return f"❌ Erreur lors de la génération : {str(e)}"
-    
+
     def stream_response(self, prompt: str):
-        """
-        Génère une réponse en streaming (mot par mot).
-        Utilisé pour une meilleure UX dans le chat.
-        
-        Args:
-            prompt: Le prompt à envoyer au LLM
-            
-        Yields:
-            Chunks de texte au fur et à mesure
-        """
+        """Simule le streaming en retournant la réponse complète en un chunk."""
         try:
-            for chunk in self.llm.stream(prompt):
-                yield chunk.content
+            result = call_1minai("", prompt)
+            yield result
         except Exception as e:
             yield f"❌ Erreur : {str(e)}"
-    
+
     # ============================================================
-    # CLASSIFICATION INTELLIGENTE DES REQUÊTES
+    # CLASSIFICATION INTELLIGENTE DES REQUÊTES (inchangée)
     # ============================================================
-    
+
     def classify_query(self, question: str) -> Tuple[str, str]:
         """
         Classification 100% par mots-clés — aucun appel LLM.
-        Évite le rechargement du modèle Ollama qui causait les CUDA errors.
         """
         question_lower = question.lower().strip()
 
-        # ── Mots-clés mathématiques → MATH_RAG ──────────────────────
         math_keywords = [
             'théorème', 'théoreme', 'dérivée', 'derivee', 'dérive',
             'intégrale', 'integrale', 'intègre', 'limite', 'limites',
@@ -125,7 +102,6 @@ class LLMManager:
             if keyword in question_lower:
                 return "MATH_RAG", f"Mot-clé: '{keyword}'"
 
-        # ── Mots-clés conversationnels → CONVERSATION ────────────────
         conv_keywords = [
             'salut', 'bonjour', 'hello', 'coucou', 'bonsoir', 'hi', 'hey',
             'merci', 'thanks', 'au revoir', 'bye', 'à bientôt', 'ciao',
@@ -136,27 +112,18 @@ class LLMManager:
             if keyword in question_lower:
                 return "CONVERSATION", f"Conversationnel: '{keyword}'"
 
-        # Réponses courtes typiquement conversationnelles
         if question_lower in {'ok', 'okay', "d'accord", 'dacord', 'compris',
                                'oui', 'ouais', 'non', 'nan', 'nope', 'super',
                                'cool', 'parfait', 'génial', 'bien'}:
             return "CONVERSATION", "Réponse courte"
 
-        # ── Par défaut : MATH_RAG (pas d'appel LLM) ──────────────────
         return "MATH_RAG", "Défaut"
-    
+
     # ============================================================
-    # CLASSIFICATION DE L'INTENTION MATHÉMATIQUE
+    # CLASSIFICATION DE L'INTENTION MATHÉMATIQUE (inchangée)
     # ============================================================
 
     def classify_math_intent(self, question: str, rag_function_type: str = "query") -> str:
-        """
-        Classifie l'intention mathématique dans une requête MATH_RAG.
-
-        Returns:
-            "EXERCICE" : résoudre, calculer, démontrer, appliquer...
-            "COURS"    : définition, théorème, propriété, expliquer...
-        """
         if rag_function_type == "exercise":
             return "EXERCICE"
 
@@ -185,22 +152,12 @@ class LLMManager:
         return "COURS"
 
     # ============================================================
-    # RÉPONSES CONVERSATIONNELLES
+    # RÉPONSES CONVERSATIONNELLES (inchangées)
     # ============================================================
 
     def get_conversation_response(self, question: str) -> str:
-        """
-        Génère une réponse conversationnelle appropriée.
-        
-        Args:
-            question: Question conversationnelle de l'utilisateur
-        
-        Returns:
-            Réponse conversationnelle
-        """
         question_lower = question.lower().strip()
-        
-        # Salutations
+
         if any(word in question_lower for word in ['salut', 'bonjour', 'hello', 'coucou', 'hi', 'hey', 'bonsoir']):
             return """Salut ! 👋
 
@@ -212,16 +169,14 @@ Je suis **IntelliMath**, ton assistant en mathématiques de lycée.
 • Expliquer des concepts mathématiques
 
 **Pose-moi une question mathématique !** 📐✨"""
-        
-        # Comment ça va
+
         elif any(phrase in question_lower for phrase in ['comment ça va', 'comment ca va', 'ça va', 'ca va', 'comment vas']):
             return """Je vais bien, merci ! 😊
 
 Je suis prêt à t'aider en mathématiques.
 
 **Quelle question as-tu ?** 📚"""
-        
-        # Demandes d'aide génériques
+
         elif any(phrase in question_lower for phrase in ['besoin d\'aide', 'besoin daide', 'aide-moi', 'aide moi', 'peux-tu m\'aider', 'tu peux m\'aider']):
             return """D'accord ! Je suis là pour t'aider. 😊
 
@@ -233,8 +188,7 @@ Je suis prêt à t'aider en mathématiques.
 • "Résous x² - 5x + 6 = 0"
 
 **Pose ta question !** 📐"""
-        
-        # Je ne comprends pas / C'est difficile
+
         elif any(phrase in question_lower for phrase in ['ne comprends pas', 'ne comprend pas', 'comprends rien', 'difficile', 'compliqué', 'complique']):
             return """Pas de problème ! Je vais t'expliquer clairement. 😊
 
@@ -243,26 +197,22 @@ Je suis prêt à t'aider en mathématiques.
 **Exemple :** "Je ne comprends pas les dérivées"
 
 📐"""
-        
-        # Remerciements
+
         elif any(word in question_lower for word in ['merci', 'thanks', 'thank you']):
             return """De rien ! 😊
 
 N'hésite pas si tu as d'autres questions en mathématiques ! 💪📐"""
-        
-        # Au revoir
+
         elif any(word in question_lower for word in ['au revoir', 'bye', 'à bientôt', 'a bientot', 'ciao']):
             return """À bientôt ! 👋
 
 Bonne continuation dans tes études ! 📚✨"""
-        
-        # OK / D'accord / Oui / Non
+
         elif question_lower in ['ok', 'okay', 'd\'accord', 'dacord', 'compris', 'oui', 'ouais', 'non', 'nan', 'nope']:
             return """Parfait ! 👍
 
 Si tu as une question en mathématiques, je suis là ! 📐"""
-        
-        # Défaut
+
         else:
             return """Je peux t'aider en mathématiques ! 📐
 
@@ -273,14 +223,8 @@ Si tu as une question en mathématiques, je suis là ! 📐"""
 • "Définis un concept"
 
 **Pose ta question !** 😊"""
-    
+
     def get_out_of_scope_response(self) -> str:
-        """
-        Génère une réponse pour les questions hors du domaine (mathématiques lycée).
-        
-        Returns:
-            Message de refus poli
-        """
         return """Je suis spécialisé en **mathématiques de lycée** uniquement. 📐
 
 **Mon domaine :**
