@@ -103,7 +103,9 @@ class VoiceService:
 
             if st.button("🔄 Transcrire", key="btn_transcribe", type="primary"):
                 with st.spinner("🔄 Transcription en cours..."):
-                    suffix = "." + audio_file.name.split(".")[-1]
+                    _ALLOWED_AUDIO_EXT = {'.wav', '.mp3', '.ogg', '.m4a', '.flac'}
+                    raw_ext = '.' + audio_file.name.rsplit('.', 1)[-1].lower()
+                    suffix = raw_ext if raw_ext in _ALLOWED_AUDIO_EXT else '.wav'
                     return self._transcribe_from_bytes(
                         audio_file.getvalue(),
                         suffix=suffix

@@ -6,6 +6,7 @@ Extrait le texte de différents formats de fichiers.
 import pdfplumber
 from docx import Document
 import io
+import re
 from typing import List, Dict, Any, Optional
 import streamlit as st
 from pathlib import Path
@@ -84,24 +85,33 @@ class DocumentProcessor:
                 
                 # Extraire le texte selon le type
                 text = self._extract_text(file)
-                
+
+                # Limite de sécurité sur le texte extrait (anti décompression bomb)
+                MAX_EXTRACTED_CHARS = 500_000
+                if text and len(text) > MAX_EXTRACTED_CHARS:
+                    text = text[:MAX_EXTRACTED_CHARS]
+
+                # Nom de fichier sûr (basename uniquement, caractères autorisés)
+                safe_name = Path(file.name).name
+                safe_name = re.sub(r'[^\w\.\-]', '_', safe_name)
+
                 if text and text.strip():
                     processed_docs.append({
                         'text': text,
                         'metadata': {
-                            'filename': file.name,
+                            'filename': safe_name,
                             'type': file.type,
                             'size': file.size
                         }
                     })
-                    
+
                     # Sauvegarder le fichier
-                    self._save_file(file)
+                    self._save_file(file, safe_name)
                 else:
                     st.warning(f"⚠️ Aucun texte extrait de {file.name}")
-                    
+
             except Exception as e:
-                st.error(f"❌ Erreur avec {file.name}: {str(e)}")
+                st.error(f"❌ Erreur avec {file.name}: traitement impossible")
         
         return processed_docs
     
@@ -294,14 +304,22 @@ class DocumentProcessor:
 
         return "[Image - extraction non disponible]"
     
-    def _save_file(self, file):
-        """Sauvegarde le fichier uploadé"""
+    def _save_file(self, file, safe_name: str = None):
+        """Sauvegarde le fichier uploadé avec protection contre le path traversal."""
         try:
-            file_path = self.upload_dir / file.name
+            name = safe_name or Path(file.name).name
+            upload_dir_resolved = self.upload_dir.resolve()
+            file_path = (upload_dir_resolved / name).resolve()
+
+            # Vérification anti path traversal
+            if not str(file_path).startswith(str(upload_dir_resolved)):
+                st.warning(f"Nom de fichier invalide : {file.name}")
+                return
+
             with open(file_path, 'wb') as f:
                 f.write(file.getbuffer())
-        except Exception as e:
-            st.warning(f"Sauvegarde échouée: {str(e)}")
+        except Exception:
+            st.warning("Sauvegarde du fichier échouée.")
     
     def get_file_stats(self) -> Dict[str, int]:
         """Retourne les statistiques des fichiers uploadés"""

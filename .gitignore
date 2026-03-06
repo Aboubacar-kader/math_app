@@ -26,6 +26,13 @@ data/knowledge_base/*
 !data/knowledge_base/.gitkeep
 
 # ========================
+# Logs
+# ========================
+logs/*.log
+logs/*.log.*
+!logs/.gitkeep
+
+# ========================
 # Secrets & config locale
 # ========================
 .env

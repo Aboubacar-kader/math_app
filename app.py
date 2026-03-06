@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import List, Dict
 import json
 import os
+import uuid
 
 # Configuration de la page
 st.set_page_config(
@@ -67,7 +68,7 @@ def init_session_state():
         st.session_state.indexed_files = []
     
     if 'conversation_counter' not in st.session_state:
-        st.session_state.conversation_counter = 0
+        st.session_state.conversation_counter = 0  # conservé pour compatibilité affichage
     
     if 'show_uploader' not in st.session_state:
         st.session_state.show_uploader = False
@@ -76,9 +77,9 @@ def init_session_state():
 def create_new_conversation(first_message: str = None):
     """Crée une nouvelle conversation"""
     st.session_state.conversation_counter += 1
-    
+
     conversation = {
-        'id': st.session_state.conversation_counter,
+        'id': uuid.uuid4().hex,
         'title': first_message[:50] + "..." if first_message and len(first_message) > 50 else first_message or f"Conversation {st.session_state.conversation_counter}",
         'created_at': datetime.now().isoformat(),
         'messages': []

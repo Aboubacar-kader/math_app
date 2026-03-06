@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 import shutil
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 def save_json(data: Dict[Any, Any], filepath: Path) -> bool:
     """
@@ -26,7 +29,7 @@ def save_json(data: Dict[Any, Any], filepath: Path) -> bool:
             json.dump(data, f, ensure_ascii=False, indent=2)
         return True
     except Exception as e:
-        print(f"Erreur lors de la sauvegarde JSON : {e}")
+        logger.error("Erreur sauvegarde JSON (%s) : %s", filepath, e)
         return False
 
 def load_json(filepath: Path) -> Optional[Dict[Any, Any]]:
@@ -45,7 +48,7 @@ def load_json(filepath: Path) -> Optional[Dict[Any, Any]]:
         with open(filepath, 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception as e:
-        print(f"Erreur lors du chargement JSON : {e}")
+        logger.error("Erreur chargement JSON (%s) : %s", filepath, e)
         return None
 
 def ensure_directory(directory: Path) -> bool:
@@ -62,7 +65,7 @@ def ensure_directory(directory: Path) -> bool:
         directory.mkdir(parents=True, exist_ok=True)
         return True
     except Exception as e:
-        print(f"Erreur lors de la création du répertoire : {e}")
+        logger.error("Erreur création répertoire (%s) : %s", directory, e)
         return False
 
 def get_file_size_mb(filepath: Path) -> float:
@@ -140,7 +143,7 @@ def create_backup(filepath: Path) -> bool:
         shutil.copy2(filepath, backup_path)
         return True
     except Exception as e:
-        print(f"Erreur lors de la création du backup : {e}")
+        logger.error("Erreur création backup (%s) : %s", filepath, e)
         return False
 
 def get_directory_size(directory: Path) -> float:
@@ -185,7 +188,7 @@ def read_text_file(filepath: Path, encoding: str = 'utf-8') -> Optional[str]:
         except:
             return None
     except Exception as e:
-        print(f"Erreur lors de la lecture du fichier : {e}")
+        logger.error("Erreur lecture fichier (%s) : %s", filepath, e)
         return None
 
 def write_text_file(filepath: Path, content: str, encoding: str = 'utf-8') -> bool:
@@ -206,5 +209,5 @@ def write_text_file(filepath: Path, content: str, encoding: str = 'utf-8') -> bo
             f.write(content)
         return True
     except Exception as e:
-        print(f"Erreur lors de l'écriture du fichier : {e}")
+        logger.error("Erreur écriture fichier (%s) : %s", filepath, e)
         return False

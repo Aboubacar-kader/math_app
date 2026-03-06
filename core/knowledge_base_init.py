@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import List, Dict, Any
 import json
 import hashlib
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 # Répertoires des cours
 KNOWLEDGE_DIR = Path("data/knowledge_base")
@@ -51,7 +54,7 @@ def _save_cache(cache: Dict[str, str]):
         with open(CACHE_FILE, "w", encoding="utf-8") as f:
             json.dump(cache, f, indent=2)
     except Exception as e:
-        print(f"[KnowledgeBase] Erreur sauvegarde cache : {e}")
+        logger.error("Erreur sauvegarde cache : %s", e)
 
 
 def _get_file_hash(filepath: Path) -> str:
@@ -184,11 +187,11 @@ def _extract_text_from_file(filepath: Path) -> str:
                 image = Image.open(filepath).convert("L")
                 return pytesseract.image_to_string(image, lang="fra")
             except ImportError:
-                print(f"[KnowledgeBase] pytesseract non installé, image ignorée : {filepath.name}")
+                logger.warning("pytesseract non installé, image ignorée : %s", filepath.name)
                 return ""
 
     except Exception as e:
-        print(f"[KnowledgeBase] Erreur extraction {filepath.name} : {e}")
+        logger.error("Erreur extraction %s : %s", filepath.name, e, exc_info=True)
         return ""
 
     return ""
@@ -231,14 +234,14 @@ def init_knowledge_base(force_reindex: bool = False):
     """
     from core.vectorstore_manager import vectorstore_manager
 
-    print("[KnowledgeBase] Vérification de la base de connaissances...")
+    logger.info("Vérification de la base de connaissances...")
 
     # Collecter les fichiers disponibles
     files = _collect_files()
 
     if not files:
-        print("[KnowledgeBase] Aucun fichier trouvé dans data/knowledge_base/")
-        print(f"[KnowledgeBase] Placez vos cours dans : {KNOWLEDGE_DIR.absolute()}")
+        logger.warning("Aucun fichier trouvé dans data/knowledge_base/")
+        logger.info("Placez vos cours dans : %s", KNOWLEDGE_DIR.absolute())
         return
 
     # Charger le cache
@@ -254,23 +257,23 @@ def init_knowledge_base(force_reindex: bool = False):
             files_to_index.append((filepath, file_hash))
 
     if not files_to_index:
-        print(f"[KnowledgeBase] Base à jour — {len(files)} fichier(s) déjà indexé(s) ✅")
+        logger.info("Base à jour — %d fichier(s) déjà indexé(s)", len(files))
         return
 
-    print(f"[KnowledgeBase] {len(files_to_index)} fichier(s) à indexer...")
+    logger.info("%d fichier(s) à indexer...", len(files_to_index))
 
     # Indexer les fichiers
     indexed_count = 0
 
     for filepath, file_hash in files_to_index:
         try:
-            print(f"[KnowledgeBase] Indexation : {filepath.name}...")
+            logger.info("Indexation : %s...", filepath.name)
 
             # Extraire le texte
             text = _extract_text_from_file(filepath)
 
             if not text.strip():
-                print(f"[KnowledgeBase] ⚠️ Texte vide : {filepath.name}")
+                logger.warning("Texte vide : %s", filepath.name)
                 continue
 
             # Métadonnées avec détection automatique du niveau
@@ -296,15 +299,15 @@ def init_knowledge_base(force_reindex: bool = False):
             cache[str(filepath)] = file_hash
             indexed_count += 1
 
-            print(f"[KnowledgeBase] ✅ Indexé : {filepath.name} ({level})")
+            logger.info("Indexé : %s (%s)", filepath.name, level)
 
         except Exception as e:
-            print(f"[KnowledgeBase] ❌ Erreur {filepath.name} : {e}")
+            logger.error("Erreur indexation %s : %s", filepath.name, e, exc_info=True)
 
     # Sauvegarder le cache mis à jour
     _save_cache(cache)
 
-    print(f"[KnowledgeBase] ✅ Indexation terminée — {indexed_count}/{len(files_to_index)} fichier(s)")
+    logger.info("Indexation terminée — %d/%d fichier(s)", indexed_count, len(files_to_index))
 
 
 def get_knowledge_base_stats() -> Dict[str, Any]:

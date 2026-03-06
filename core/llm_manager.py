@@ -8,6 +8,9 @@ import requests
 from langchain_huggingface import HuggingFaceEmbeddings
 from typing import Optional, Tuple
 from config.settings import settings
+from utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 def call_1minai(system_prompt: str, user_content: str, retries: int = 2) -> str:
@@ -32,7 +35,6 @@ def call_1minai(system_prompt: str, user_content: str, retries: int = 2) -> str:
         },
     }
 
-    last_error = None
     for attempt in range(retries + 1):
         try:
             response = requests.post(url, headers=headers, json=payload, timeout=120)
@@ -41,7 +43,6 @@ def call_1minai(system_prompt: str, user_content: str, retries: int = 2) -> str:
             if response.status_code == 429:
                 wait = 3 * (attempt + 1)
                 time.sleep(wait)
-                last_error = f"Rate limit (429) — tentative {attempt + 1}"
                 continue
 
             response.raise_for_status()
@@ -54,22 +55,25 @@ def call_1minai(system_prompt: str, user_content: str, retries: int = 2) -> str:
             elif isinstance(result_obj, str) and result_obj:
                 return result_obj
             else:
-                raise ValueError(f"Format réponse inattendu : {str(data)[:300]}")
+                # Log interne uniquement — ne pas exposer le contenu de la réponse
+                logger.error("Format réponse inattendu : %s", str(data)[:300])
+                raise ValueError("Format de réponse inattendu")
 
         except requests.HTTPError as e:
-            last_error = f"HTTP {e.response.status_code}: {e.response.text[:200]}"
+            # Log interne avec le code HTTP, sans exposer le corps de la réponse
+            logger.warning("HTTP %s — tentative %d", e.response.status_code, attempt + 1)
             if attempt < retries:
                 time.sleep(2)
                 continue
             break
         except Exception as e:
-            last_error = str(e)
+            logger.warning("Erreur tentative %d : %s", attempt + 1, type(e).__name__)
             if attempt < retries:
                 time.sleep(2)
                 continue
             break
 
-    raise RuntimeError(f"1min.ai API échouée après {retries + 1} tentatives : {last_error}")
+    raise RuntimeError(f"Service LLM indisponible (après {retries + 1} tentatives)")
 
 
 class LLMManager:

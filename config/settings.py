@@ -6,6 +6,10 @@ Charge les variables d'environnement et définit les paramètres globaux.
 from pydantic_settings import BaseSettings
 from pathlib import Path
 from typing import Optional
+import logging
+
+# Logger minimal pour settings (utils.logger n'est pas encore disponible ici)
+_log = logging.getLogger("intellimath.config.settings")
 
 class Settings(BaseSettings):
     """Paramètres de configuration de l'application"""
@@ -63,11 +67,10 @@ class Settings(BaseSettings):
             try:
                 if directory.exists() and directory.is_file():
                     directory.unlink()
-                    print(f"⚠️ Fichier supprimé : {directory}")
+                    _log.warning("Fichier en conflit supprimé : %s", directory)
                 directory.mkdir(parents=True, exist_ok=True)
             except Exception as e:
-                print(f"❌ Erreur lors de la création de {directory}: {e}")
-                pass
+                _log.error("Erreur création répertoire %s : %s", directory, e)
 
 # Instance globale
 settings = Settings()

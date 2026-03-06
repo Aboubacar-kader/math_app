@@ -11,6 +11,32 @@ import plotly.graph_objects as go
 from typing import Dict, List, Tuple, Optional
 import re
 
+# ============================================================
+# SÉCURITÉ — VALIDATION DES EXPRESSIONS MATHÉMATIQUES
+# ============================================================
+
+_FORBIDDEN_PAT = re.compile(
+    r'__|import|exec|eval\s*\(|open\s*\(|os\b|sys\b|builtins|compile|'
+    r'globals\s*\(|locals\s*\(|getattr|setattr|delattr|input\s*\(|print\s*\(',
+    re.IGNORECASE
+)
+_ALLOWED_NAMES_PAT = re.compile(
+    r'\b(sin|cos|tan|sqrt|exp|log|abs|floor|ceil|arcsin|arccos|arctan|'
+    r'pi|np|x|e)\b'
+)
+_ALLOWED_CHARS_PAT = re.compile(r'[\d\s\+\-\*\/\%\(\)\.\,]')
+
+
+def _is_safe_formula(expr: str) -> bool:
+    """Vérifie qu'une expression ne contient que des opérations mathématiques autorisées."""
+    if not expr or len(expr) > 300:
+        return False
+    if _FORBIDDEN_PAT.search(expr):
+        return False
+    remaining = _ALLOWED_NAMES_PAT.sub('', expr)
+    remaining = _ALLOWED_CHARS_PAT.sub('', remaining)
+    return len(remaining.strip()) == 0
+
 
 # ============================================================
 # DÉTECTION AUTOMATIQUE
@@ -338,11 +364,17 @@ class GeometryPlotter:
             func_str = func_str.replace('^', '**')
             func_str = func_str.replace('x2', 'x**2')
             func_str = func_str.replace('x²', 'x**2')
-            
+
+            # Validation de sécurité avant eval
+            if not _is_safe_formula(func_str):
+                st.warning(f"⚠️ Expression non autorisée : {func_str}")
+                return self.fig
+
             # Évaluer la fonction
-            y = eval(func_str, {'x': x, 'np': np, 'sin': np.sin, 
-                               'cos': np.cos, 'tan': np.tan, 
-                               'sqrt': np.sqrt, 'exp': np.exp, 'log': np.log})
+            ns = {'x': x, 'np': np, 'sin': np.sin, 'cos': np.cos,
+                  'tan': np.tan, 'sqrt': np.sqrt, 'exp': np.exp,
+                  'log': np.log, '__builtins__': {}}
+            y = eval(func_str, ns)  # noqa: S307
             
             self.ax.plot(x, y, color='#FF6B35', linewidth=2, label=f'f(x) = {func_str}')
             self.ax.axhline(y=0, color='k', linewidth=0.5)
@@ -448,12 +480,15 @@ def create_interactive_triangle(points: List[Tuple[float, float]] = None):
 
 def _eval_func(func_str: str, x: np.ndarray) -> Optional[np.ndarray]:
     """Évalue une expression Python sur un tableau numpy. Retourne None si échec."""
+    if not _is_safe_formula(func_str):
+        return None
     ns = {'x': x, 'np': np, 'sin': np.sin, 'cos': np.cos, 'tan': np.tan,
           'sqrt': np.sqrt, 'exp': np.exp, 'log': np.log,
           'floor': np.floor, 'ceil': np.ceil, 'abs': np.abs,
-          'arcsin': np.arcsin, 'arccos': np.arccos, 'arctan': np.arctan}
+          'arcsin': np.arcsin, 'arccos': np.arccos, 'arctan': np.arctan,
+          '__builtins__': {}}
     try:
-        result = eval(func_str, ns)
+        result = eval(func_str, ns)  # noqa: S307
         return np.where(np.isfinite(result), result, np.nan)
     except Exception:
         return None
