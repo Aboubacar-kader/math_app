@@ -12,6 +12,36 @@ from pathlib import Path
 from config.settings import settings
 from core.llm_manager import call_1minai
 
+def _parse_vision_response(data: dict) -> str:
+    """Extrait le texte d'une réponse JSON 1min.ai (robuste aux changements de structure)."""
+    # Chemin principal
+    try:
+        text = data["aiRecord"]["aiRecordDetail"]["resultObject"][0]
+        if isinstance(text, str) and text.strip():
+            return text.strip()
+    except (KeyError, IndexError, TypeError):
+        pass
+    # Chemins alternatifs
+    for path in [
+        ["aiRecord", "aiRecordDetail", "resultObject"],
+        ["result"],
+        ["content"],
+        ["text"],
+        ["message", "content"],
+    ]:
+        try:
+            node = data
+            for key in path:
+                node = node[key]
+            if isinstance(node, list):
+                node = node[0]
+            if isinstance(node, str) and node.strip():
+                return node.strip()
+        except (KeyError, IndexError, TypeError):
+            continue
+    return ""
+
+
 class DocumentProcessor:
     """Processeur de documents multi-formats"""
     
@@ -107,16 +137,20 @@ class DocumentProcessor:
             return ""
     
     def _extract_from_pdf(self, file) -> str:
-        """Extrait le texte et les tableaux d'un PDF via pdfplumber"""
+        """Extrait le texte d'un PDF via pdfplumber.
+        Si une page ne contient pas de texte sélectionnable (PDF scanné),
+        elle est envoyée à la vision IA pour OCR."""
         try:
-            file_bytes = io.BytesIO(file.read())
+            raw_bytes = file.read()
+            file.seek(0)
+            file_bytes = io.BytesIO(raw_bytes)
             text = ""
 
             with pdfplumber.open(file_bytes) as pdf:
                 for page_num, page in enumerate(pdf.pages):
                     page_text = page.extract_text() or ""
 
-                    # Extraire les tableaux et les convertir en texte structuré
+                    # Tableaux
                     tables = page.extract_tables()
                     table_text = ""
                     for table in tables:
@@ -129,12 +163,55 @@ class DocumentProcessor:
                     if table_text.strip():
                         page_content += "\n" + table_text
 
+                    # Fallback vision si page vide (PDF scanné / image)
+                    if not page_content.strip():
+                        page_content = self._ocr_pdf_page(page, page_num + 1)
+
                     if page_content.strip():
                         text += f"\n--- Page {page_num + 1} ---\n{page_content}"
 
             return text
         except Exception as e:
             st.error(f"Erreur PDF: {str(e)}")
+            return ""
+
+    def _ocr_pdf_page(self, page, page_num: int) -> str:
+        """Convertit une page PDF en image et l'envoie à la vision IA pour OCR."""
+        try:
+            import base64
+            import requests as _requests
+
+            # Rendre la page en image (pdfplumber utilise pdfminer/Pillow)
+            pil_image = page.to_image(resolution=150).original
+            buf = io.BytesIO()
+            pil_image.save(buf, format="PNG")
+            b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+
+            url = f"{settings.MIN_AI_BASE_URL}/api/chat-with-ai"
+            headers = {
+                "Content-Type": "application/json",
+                "API-KEY": settings.MIN_AI_API_KEY,
+            }
+            payload = {
+                "type": "CHAT_WITH_AI",
+                "model": settings.MIN_AI_MODEL,
+                "promptObject": {
+                    "prompt": (
+                        "Transcris intégralement tout le texte et toutes les formules "
+                        "mathématiques de cette page de document. "
+                        "Conserve la structure : titres, numéros, tableaux, formules "
+                        "(notation standard : f(x) = ...). Ne résous rien, transcris uniquement."
+                    ),
+                    "isMixed": True,
+                    "imageList": [b64],
+                    "webSearch": False,
+                },
+            }
+            response = _requests.post(url, headers=headers, json=payload, timeout=90)
+            response.raise_for_status()
+            return _parse_vision_response(response.json())
+        except Exception as e:
+            st.warning(f"⚠️ OCR page {page_num} échoué : {e}")
             return ""
     
     def _extract_from_docx(self, file) -> str:
@@ -176,15 +253,13 @@ class DocumentProcessor:
                 return ""
     
     def _extract_from_image(self, file) -> str:
-        """
-        Extraction via GPT-4o Vision (1min.ai) — aucun OCR local requis.
-        Envoie l'image en base64 directement à l'API.
-        """
+        """Extraction via vision IA (1min.ai) — aucun OCR local requis."""
         import base64
         import requests as _requests
-        file_bytes = file.read()
 
-        # Encoder l'image en base64
+        file_bytes = file.read()
+        file.seek(0)  # Réinitialiser le curseur pour un éventuel re-read ultérieur
+
         b64_image = base64.b64encode(file_bytes).decode('utf-8')
 
         try:
@@ -211,12 +286,11 @@ class DocumentProcessor:
             }
             response = _requests.post(url, headers=headers, json=payload, timeout=90)
             response.raise_for_status()
-            data = response.json()
-            text = data["aiRecord"]["aiRecordDetail"]["resultObject"][0]
-            if text.strip():
-                return text.strip()
+            text = _parse_vision_response(response.json())
+            if text:
+                return text
         except Exception as e:
-            st.warning(f"⚠️ Extraction vision GPT-4o échouée : {e}")
+            st.warning(f"⚠️ Extraction vision échouée : {e}")
 
         return "[Image - extraction non disponible]"
     

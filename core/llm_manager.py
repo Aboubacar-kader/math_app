@@ -239,6 +239,7 @@ Je suis prêt à t'aider en mathématiques.
 
 N'hésite pas si tu as d'autres questions en mathématiques ! 💪📐"""
 
+
         elif any(word in question_lower for word in ['au revoir', 'bye', 'à bientôt', 'a bientot', 'ciao']):
             return """À bientôt ! 👋
 

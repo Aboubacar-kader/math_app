@@ -14,7 +14,7 @@ class RAGService:
 
     def __init__(self):
         self.last_sources = []
-        self.min_relevance_score = 0.6
+        self.min_relevance_score = 0.38
         self.max_documents = 3
 
     # ════════════════════════════════════════════════════════
@@ -50,11 +50,7 @@ class RAGService:
         filtered_docs = self._filter_relevant_documents(relevant_docs)
 
         if not filtered_docs:
-            return self._no_info_response(question), []
-
-        best_score = max(doc.get('score', 0) for doc in filtered_docs)
-        if best_score < 0.5:
-            return self._no_info_response(question), []
+            return self._llm_fallback(question), []
 
         sources = self._prepare_sources(filtered_docs)
         self.last_sources = sources
@@ -84,20 +80,11 @@ class RAGService:
         filtered_docs = self._filter_relevant_documents(relevant_docs)
 
         if not filtered_docs:
-            response_text = self._no_info_response(question)
+            response_text = self._llm_fallback(question)
             if use_streaming:
                 def empty_gen():
                     yield response_text
                 return empty_gen()
-            return response_text
-
-        best_score = max(doc.get('score', 0) for doc in filtered_docs)
-        if best_score < 0.5:
-            response_text = self._no_info_response(question)
-            if use_streaming:
-                def response_gen():
-                    yield response_text
-                return response_gen()
             return response_text
 
         sources = self._prepare_sources(filtered_docs)
@@ -133,7 +120,7 @@ class RAGService:
         filtered_docs = self._filter_relevant_documents(relevant_docs)
 
         if not filtered_docs:
-            return self._no_info_response(f"définition de {term}"), []
+            return self._llm_fallback_definition(term, level), []
 
         sources = self._prepare_sources(filtered_docs)
         context = self._build_context(filtered_docs)
@@ -264,6 +251,75 @@ Commence la résolution :"""
             if doc.get('score', 0) >= self.min_relevance_score
         ]
 
+    def _llm_fallback(self, question: str) -> str:
+        """Répond directement via le LLM quand le RAG ne trouve rien de pertinent."""
+        system_prompt = """Tu es IntelliMath, assistant pédagogique expert en mathématiques de lycée français.
+
+DOMAINE : Mathématiques lycée (Seconde, Première, Terminale) UNIQUEMENT.
+Si la question n'est pas une question de mathématiques lycée, réponds :
+"Je suis spécialisé en mathématiques de lycée. Reformule ta question en termes mathématiques."
+
+⚠️ LATEX : $...$ inline, $$...$$ en bloc. Jamais \\begin{...}.
+
+📝 FORMAT :
+
+📘 [Nom exact du concept / théorème / propriété]
+
+🔹 Énoncé
+
+[Énoncé rigoureux avec formules LaTeX]
+
+💡 Explication claire
+
+[Explication simple pour un lycéen]
+
+🎯 Exemple d'application
+
+[Exemple concret résolu étape par étape]
+
+✨ Points clés
+
+• [Point 1]
+• [Point 2]"""
+        user_content = f"❓ QUESTION : {question}"
+        try:
+            return self._call_llm(system_prompt, user_content)
+        except Exception:
+            return self._no_info_response(question)
+
+    def _llm_fallback_definition(self, term: str, level: str) -> str:
+        """Fournit une définition via le LLM quand le RAG ne trouve rien."""
+        system_prompt = f"""Tu es IntelliMath, assistant pédagogique expert en mathématiques de lycée français.
+Niveau : {level}
+
+⚠️ LATEX : $...$ inline, $$...$$ en bloc. Jamais \\begin{{...}}.
+
+📝 FORMAT OBLIGATOIRE :
+
+📘 [Nom exact du concept]
+
+🔹 Définition
+
+[Définition rigoureuse avec formules LaTeX]
+
+💡 Explication
+
+[Explication simple pour un lycéen de {level}]
+
+🎯 Exemple concret
+
+[Exemple numérique avec résolution]
+
+✨ Points clés
+
+• [Point 1]
+• [Point 2]"""
+        user_content = f"❓ TERME : {term}\n📊 NIVEAU : {level}"
+        try:
+            return self._call_llm(system_prompt, user_content)
+        except Exception:
+            return self._no_info_response(term)
+
     def _no_info_response(self, question: str) -> str:
         """Réponse stricte quand aucune information pertinente n'est disponible."""
         return f"""### ℹ️ Aucune information disponible
@@ -393,7 +449,7 @@ Commence ta réponse avec 📘 :"""
                 header += f" [Niveau {level}]"
             header += " ---"
 
-            truncated_text = text[:800] if len(text) > 800 else text
+            truncated_text = text[:1000] if len(text) > 1000 else text
             context_parts.append(f"{header}\n{truncated_text}\n")
 
         return "\n".join(context_parts)

@@ -640,7 +640,7 @@ Le document fourni est le contexte de référence. Lis-le entièrement et répon
 
         # Pas de document → RAG classique sur la base de connaissances
         else:
-            rag_query = f"{question}\nContexte : {conv_context}" if conv_context else question
+            rag_query = question  # vector search = question seule (conv_context injecté dans le prompt LLM)
             with st.spinner("📚 Recherche dans la base de cours..."):
                 try:
                     if rag_function_type == "definition" and level:
@@ -653,7 +653,17 @@ Le document fourni est le contexte de référence. Lis-le entièrement et répon
                     add_to_context(section_key, "assistant", f"❌ Erreur : {str(e)}")
 
     # Détecter si un graphique est demandé
-    detection_text = f"{question} {doc_context}" if doc_context else question
+    # On combine : question + doc_context + début de la réponse LLM
+    history_key = f'chat_history_{section_key}'
+    last_llm_response = next(
+        (m['content'] for m in reversed(st.session_state.get(history_key, []))
+         if m.get('role') == 'assistant'), ''
+    )
+    detection_text = ' '.join(filter(None, [
+        question,
+        doc_context[:400] if doc_context else '',
+        last_llm_response[:600],
+    ]))
     fig_detection = detect_figure_needed(detection_text)
     if fig_detection.get('needs_figure'):
         st.session_state[f'figure_detection_{section_key}'] = fig_detection

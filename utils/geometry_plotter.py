@@ -33,9 +33,14 @@ def detect_figure_needed(text: str) -> Dict[str, any]:
     # Mots-clés de détection
     plot_keywords = [
         'trace', 'tracer', 'dessine', 'dessiner', 'représente', 'représenter',
-        'graphique', 'courbe', 'figure', 'schéma', 'construction','représentation graphique','courbe représentative'
+        'graphique', 'courbe', 'figure', 'schéma', 'construction',
+        'représentation graphique', 'courbe représentative',
+        'construis', 'construire', 'illustre', 'illustrer',
+        'montre', 'montrer', 'affiche', 'afficher',
+        'visualise', 'visualiser', 'plot', 'sketch',
+        'représentation', 'parabole', 'hyperbole',
     ]
-    
+
     needs_figure = any(keyword in text_lower for keyword in plot_keywords)
     
     if not needs_figure:
@@ -44,39 +49,36 @@ def detect_figure_needed(text: str) -> Dict[str, any]:
     # Noms de fonctions mathématiques nommées → formule Python
     # name → (python_expr, display_latex)
     NAMED_FUNCTIONS = {
-        # Algébriques
+        # Algébriques — ordre du plus spécifique au plus général
+        'racine carrée': ('np.sqrt(x)', '\\sqrt{x}'),
+        'partie entière': ('np.floor(x)', 'E(x)'),
+        'valeur absolue': ('np.abs(x)', '|x|'),
+        'sinus hyperbolique': ('np.sinh(x)', '\\sinh(x)'),
+        'cosinus hyperbolique': ('np.cosh(x)', '\\cosh(x)'),
+        'logarithme népérien': ('np.log(x)', '\\ln(x)'),
+        'logarithme': ('np.log(x)', '\\ln(x)'),
+        'exponentielle': ('np.exp(x)', 'e^x'),
+        'cosinus': ('np.cos(x)', '\\cos(x)'),
+        'sinus': ('np.sin(x)', '\\sin(x)'),
+        'tangente': ('np.tan(x)', '\\tan(x)'),
+        'parabole': ('x**2', 'x^2'),
+        'cubique': ('x**3', 'x^3'),
+        'hyperbole': ('1/x', '1/x'),
         'carré': ('x**2', 'x^2'),
         'cube': ('x**3', 'x^3'),
         'affine': ('2*x+1', '2x+1'),
         'linéaire': ('2*x', '2x'),
         'inverse': ('1/x', '1/x'),
         'puissance': ('x**2', 'x^2'),
-        # Racines
-        'racine carrée': ('np.sqrt(x)', '\\sqrt{x}'),
         'racine': ('np.sqrt(x)', '\\sqrt{x}'),
-        # Partie entière
         'entière': ('np.floor(x)', 'E(x)'),
-        'partie entière': ('np.floor(x)', 'E(x)'),
         'floor': ('np.floor(x)', 'E(x)'),
-        # Logarithme / exponentielle
-        'logarithme népérien': ('np.log(x)', '\\ln(x)'),
-        'logarithme': ('np.log(x)', '\\ln(x)'),
         'log': ('np.log(x)', '\\ln(x)'),
-        'exponentielle': ('np.exp(x)', 'e^x'),
         'exp': ('np.exp(x)', 'e^x'),
-        # Trigonométriques
-        'cosinus': ('np.cos(x)', '\\cos(x)'),
-        'sinus': ('np.sin(x)', '\\sin(x)'),
-        'tangente': ('np.tan(x)', '\\tan(x)'),
         'cos': ('np.cos(x)', '\\cos(x)'),
         'sin': ('np.sin(x)', '\\sin(x)'),
         'tan': ('np.tan(x)', '\\tan(x)'),
-        # Valeur absolue
-        'valeur absolue': ('np.abs(x)', '|x|'),
         'absolue': ('np.abs(x)', '|x|'),
-        # Hyperboliques
-        'sinus hyperbolique': ('np.sinh(x)', '\\sinh(x)'),
-        'cosinus hyperbolique': ('np.cosh(x)', '\\cosh(x)'),
     }
 
     # Si "fonction" est mentionné, vérifier si c'est une fonction nommée
@@ -92,14 +94,16 @@ def detect_figure_needed(text: str) -> Dict[str, any]:
 
     # Détection du type de figure
     figure_types = {
-        'triangle': ['triangle'],
-        'cercle': ['cercle', 'rond'],
+        'triangle': ['triangle', 'isocèle', 'équilatéral', 'scalène'],
+        'cercle': ['cercle', 'rond', 'disque', 'arc de cercle'],
         'rectangle': ['rectangle'],
-        'repere': ['repère', 'repere', 'axes', 'plan cartésien', 'repère orthonormé'],
-        'fonction': ['fonction', 'courbe de', 'graphe de', 'f(x)', 'g(x)'],
+        'repere': ['repère', 'repere', 'axes', 'plan cartésien',
+                   'repère orthonormé', 'système de coordonnées'],
+        'fonction': ['fonction', 'courbe de', 'graphe de',
+                     'f(x)', 'g(x)', 'h(x)', 'parabole', 'hyperbole', 'droite'],
         'vecteur': ['vecteur', 'vecteurs'],
         'angle': ['angle'],
-        'polygone': ['polygone', 'pentagone', 'hexagone'],
+        'polygone': ['polygone', 'pentagone', 'hexagone', 'octogone', 'heptagone'],
         'carre': ['carré'],
     }
 
@@ -139,8 +143,11 @@ def detect_figure_needed(text: str) -> Dict[str, any]:
 def _to_python_expr(expr: str) -> str:
     """Convertit une expression mathématique en expression Python évaluable."""
     expr = expr.strip()
-    expr = expr.replace('^', '**')
+    # Signe moins Unicode (U+2212) → ASCII
+    expr = expr.replace('\u2212', '-')
+    # Exposants Unicode
     expr = expr.replace('²', '**2').replace('³', '**3')
+    expr = expr.replace('^', '**')
     # Multiplication implicite : 2x → 2*x, 3x² → 3*x**2, 2(x+1) → 2*(x+1)
     expr = re.sub(r'(\d)(x)', r'\1*x', expr)
     expr = re.sub(r'(\d)\(', r'\1*(', expr)
@@ -148,23 +155,83 @@ def _to_python_expr(expr: str) -> str:
     return expr
 
 
+def _clean_formula(raw: str) -> str:
+    """Supprime le texte français qui suit une formule (ex: 'sur [-3, 3]', 'pour x ∈ ℝ')."""
+    stop_words = [' sur ', ' pour ', ' avec ', ' où ', ' et ', ' en ', ' de ', ' dans ', ' lorsque ']
+    for sw in stop_words:
+        idx = raw.lower().find(sw)
+        if idx > 0:
+            raw = raw[:idx]
+    return raw.strip().rstrip(',;')
+
+
 def extract_parameters(text: str, figure_type: str) -> dict:
     """Extrait les paramètres géométriques et analytiques de l'énoncé."""
     params = {}
 
     # ── Fonctions analytiques ────────────────────────────────────────────────
+    # Fonction principale (f, g, h, y)
     func_patterns = [
-        r'f\(x\)\s*=\s*([^,\n;]+)',
-        r'g\(x\)\s*=\s*([^,\n;]+)',
-        r'h\(x\)\s*=\s*([^,\n;]+)',
-        r'y\s*=\s*([^,\n;]+)',
+        (r'f\(x\)\s*=\s*([^,\n;]+)', 'f(x)'),
+        (r'g\(x\)\s*=\s*([^,\n;]+)', 'g(x)'),
+        (r'h\(x\)\s*=\s*([^,\n;]+)', 'h(x)'),
+        (r'y\s*=\s*([^,\n;]+)', 'y'),
     ]
-    for pattern in func_patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            raw = match.group(1).strip()
-            params['function'] = raw
-            params['function_py'] = _to_python_expr(raw)
+    first_func = True
+    extra_funcs = []
+    for pattern, name in func_patterns:
+        for match in re.finditer(pattern, text, re.IGNORECASE):
+            raw = _clean_formula(match.group(1))
+            py = _to_python_expr(raw)
+            if not py:
+                continue
+            if first_func:
+                params['function'] = raw
+                params['function_py'] = py
+                params['function_name'] = name
+                first_func = False
+            else:
+                extra_funcs.append((raw, py, name))
+    if extra_funcs:
+        params['extra_functions'] = extra_funcs
+
+    # ── Plage x_range : "sur [-3, 5]", "pour x ∈ [-3, 5]", "x ∈ [a, b]" ────
+    _num = r'-?\d+(?:[.,]\d+)?'
+    range_patterns = [
+        rf'sur\s+\[?\s*({_num})\s*[;,]\s*({_num})\s*\]?',
+        rf'pour\s+x\s*[∈e]\s*\[?\s*({_num})\s*[;,]\s*({_num})\s*\]?',
+        rf'x\s*[∈e]\s*\[?\s*({_num})\s*[;,]\s*({_num})\s*\]?',
+        rf'intervalle\s+\[?\s*({_num})\s*[;,]\s*({_num})\s*\]?',
+        rf'\[\s*({_num})\s*[;,]\s*({_num})\s*\]',  # Dernier recours : premier crochet trouvé
+    ]
+    for rp in range_patterns:
+        rm = re.search(rp, text, re.IGNORECASE)
+        if rm:
+            try:
+                lo = float(rm.group(1).replace(',', '.'))
+                hi = float(rm.group(2).replace(',', '.'))
+                if lo < hi:
+                    params['x_range'] = (lo, hi)
+                    break
+            except (ValueError, IndexError):
+                pass
+
+    # ── Angle en degrés ──────────────────────────────────────────────────────
+    am = re.search(r'(\d+(?:[.,]\d+)?)\s*°', text)
+    if not am:
+        am = re.search(r'(\d+(?:[.,]\d+)?)\s*degr', text, re.IGNORECASE)
+    if am:
+        params['angle_deg'] = float(am.group(1).replace(',', '.'))
+
+    # ── Nombre de côtés (polygone) ───────────────────────────────────────────
+    polygon_sides = {
+        'triangle': 3, 'carré': 4, 'pentagone': 5,
+        'hexagone': 6, 'heptagone': 7, 'octogone': 8,
+    }
+    tl = text.lower()
+    for name, n in polygon_sides.items():
+        if name in tl:
+            params['n_sides'] = n
             break
 
     # ── Rayon (cercle) ───────────────────────────────────────────────────────
@@ -379,35 +446,77 @@ def create_interactive_triangle(points: List[Tuple[float, float]] = None):
     return fig
 
 
-def create_interactive_function(func_str: str, x_range: Tuple[float, float] = (-5, 5)):
-    """Crée un graphique de fonction interactif avec axes gradués."""
+def _eval_func(func_str: str, x: np.ndarray) -> Optional[np.ndarray]:
+    """Évalue une expression Python sur un tableau numpy. Retourne None si échec."""
+    ns = {'x': x, 'np': np, 'sin': np.sin, 'cos': np.cos, 'tan': np.tan,
+          'sqrt': np.sqrt, 'exp': np.exp, 'log': np.log,
+          'floor': np.floor, 'ceil': np.ceil, 'abs': np.abs,
+          'arcsin': np.arcsin, 'arccos': np.arccos, 'arctan': np.arctan}
     try:
-        is_step = 'floor' in func_str or 'ceil' in func_str or 'round' in func_str
-        # Fonction en escalier : points denses pour chaque entier
-        if is_step:
-            x = np.array([v for i in range(int(x_range[0])-1, int(x_range[1])+2)
-                          for v in [i, i + 0.9999]])
-            x = np.sort(x)
-        else:
-            x = np.linspace(x_range[0], x_range[1], 600)
+        result = eval(func_str, ns)
+        return np.where(np.isfinite(result), result, np.nan)
+    except Exception:
+        return None
 
-        func_str = func_str.replace('^', '**').replace('x2', 'x**2').replace('x²', 'x**2')
-        y = eval(func_str, {'x': x, 'np': np, 'sin': np.sin, 'cos': np.cos,
-                            'tan': np.tan, 'sqrt': np.sqrt, 'exp': np.exp, 'log': np.log,
-                            'floor': np.floor, 'ceil': np.ceil, 'abs': np.abs})
 
-        y_finite = y[np.isfinite(y)]
-        y_min = float(np.min(y_finite)) if len(y_finite) else -5
-        y_max = float(np.max(y_finite)) if len(y_finite) else 5
+def _make_x(func_str: str, x_range: Tuple[float, float]) -> np.ndarray:
+    """Génère les abscisses adaptées (dense pour les fonctions en escalier)."""
+    is_step = any(k in func_str for k in ('floor', 'ceil', 'round'))
+    if is_step:
+        pts = [v for i in range(int(x_range[0]) - 1, int(x_range[1]) + 2)
+               for v in (i, i + 0.9999)]
+        return np.sort(np.array(pts))
+    return np.linspace(x_range[0], x_range[1], 800)
+
+
+_CURVE_COLORS = ['#FF6B35', '#4CAF50', '#2196F3', '#9C27B0', '#FF9800']
+
+
+def create_interactive_function(
+    func_str: str,
+    x_range: Tuple[float, float] = (-5, 5),
+    extra_functions: list = None,
+):
+    """Crée un graphique de fonction interactif avec axes gradués.
+
+    Args:
+        func_str: Expression Python principale (f(x))
+        x_range: Plage des abscisses (x_min, x_max)
+        extra_functions: Liste de (display, py_expr, name) pour courbes supplémentaires
+    """
+    try:
+        # Normaliser l'expression principale
+        func_str = _to_python_expr(func_str)
+
+        x = _make_x(func_str, x_range)
+        y = _eval_func(func_str, x)
+        if y is None:
+            st.error(f"Impossible d'évaluer : {func_str}")
+            return None
+
+        # Calcul des bornes y sur toutes les courbes
+        all_y_finite = y[np.isfinite(y)].tolist()
+        if extra_functions:
+            for _, py_expr, _ in extra_functions:
+                py_expr = _to_python_expr(py_expr)
+                ye = _eval_func(py_expr, x)
+                if ye is not None:
+                    all_y_finite += ye[np.isfinite(ye)].tolist()
+
+        y_arr = np.array(all_y_finite)
+        y_min = float(np.min(y_arr)) if len(y_arr) else -5
+        y_max = float(np.max(y_arr)) if len(y_arr) else 5
+        # Éviter un range nul ou trop petit
+        if abs(y_max - y_min) < 0.5:
+            y_min -= 2; y_max += 2
         y_pad = max((y_max - y_min) * 0.12, 0.5)
         y_lo, y_hi = y_min - y_pad, y_max + y_pad
 
-        # Pas de graduation automatique (entiers si plage ≤ 20, sinon tous les 2 ou 5)
         def nice_tick(lo, hi):
-            span = hi - lo
-            if span <= 12:   return 1
-            if span <= 30:   return 2
-            if span <= 60:   return 5
+            span = abs(hi - lo)
+            if span <= 12:  return 1
+            if span <= 30:  return 2
+            if span <= 60:  return 5
             return 10
 
         dx = nice_tick(x_range[0], x_range[1])
@@ -415,62 +524,57 @@ def create_interactive_function(func_str: str, x_range: Tuple[float, float] = (-
 
         fig = go.Figure()
 
-        # Courbe
+        # Courbe principale
         fig.add_trace(go.Scatter(
-            x=x, y=y,
-            mode='lines',
-            line=dict(color='#FF6B35', width=2.5),
+            x=x, y=y, mode='lines',
+            line=dict(color=_CURVE_COLORS[0], width=2.5),
             name=f'f(x) = {func_str}',
-            connectgaps=False
+            connectgaps=False,
         ))
 
-        # Axe des abscisses (y = 0) et des ordonnées (x = 0)
+        # Courbes supplémentaires
+        if extra_functions:
+            for i, (display, py_expr, name) in enumerate(extra_functions):
+                py_expr = _to_python_expr(py_expr)
+                xe = _make_x(py_expr, x_range)
+                ye = _eval_func(py_expr, xe)
+                if ye is not None:
+                    color = _CURVE_COLORS[(i + 1) % len(_CURVE_COLORS)]
+                    fig.add_trace(go.Scatter(
+                        x=xe, y=ye, mode='lines',
+                        line=dict(color=color, width=2.5),
+                        name=f'{name} = {display}',
+                        connectgaps=False,
+                    ))
+
         fig.add_hline(y=0, line_color='black', line_width=1.5)
         fig.add_vline(x=0, line_color='black', line_width=1.5)
 
         fig.update_layout(
             xaxis=dict(
-                title='x',
-                title_font=dict(size=14),
+                title='x', title_font=dict(size=14),
                 range=[x_range[0], x_range[1]],
-                dtick=dx,
-                tick0=0,
-                tickmode='linear',
-                showgrid=True,
-                gridcolor='#e0e0e0',
-                gridwidth=1,
-                zeroline=False,           # géré par add_vline
-                showline=True,
-                linecolor='black',
-                ticks='outside',
-                ticklen=5,
-                tickfont=dict(size=12),
-                minor=dict(showgrid=True, gridcolor='#f0f0f0', dtick=dx/2 if dx >= 2 else None),
+                dtick=dx, tick0=0, tickmode='linear',
+                showgrid=True, gridcolor='#e0e0e0', gridwidth=1,
+                zeroline=False, showline=True, linecolor='black',
+                ticks='outside', ticklen=5, tickfont=dict(size=12),
+                minor=dict(showgrid=True, gridcolor='#f0f0f0',
+                           dtick=dx / 2 if dx >= 2 else None),
             ),
             yaxis=dict(
-                title='y',
-                title_font=dict(size=14),
+                title='y', title_font=dict(size=14),
                 range=[y_lo, y_hi],
-                dtick=dy,
-                tick0=0,
-                tickmode='linear',
-                showgrid=True,
-                gridcolor='#e0e0e0',
-                gridwidth=1,
-                zeroline=False,
-                showline=True,
-                linecolor='black',
-                ticks='outside',
-                ticklen=5,
-                tickfont=dict(size=12),
+                dtick=dy, tick0=0, tickmode='linear',
+                showgrid=True, gridcolor='#e0e0e0', gridwidth=1,
+                zeroline=False, showline=True, linecolor='black',
+                ticks='outside', ticklen=5, tickfont=dict(size=12),
                 scaleanchor=None,
             ),
             showlegend=True,
             legend=dict(x=0.01, y=0.99, bgcolor='rgba(255,255,255,0.7)'),
             width=720, height=520,
             hovermode='x unified',
-            plot_bgcolor='white',
-            paper_bgcolor='white',
+            plot_bgcolor='white', paper_bgcolor='white',
             margin=dict(l=60, r=30, t=40, b=60),
         )
 
@@ -644,6 +748,94 @@ def _create_vector(vectors=None) -> go.Figure:
     return fig
 
 
+def _create_angle(angle_deg: float = 45.0, labels: List[str] = None) -> go.Figure:
+    """Trace un angle avec deux rayons et un arc."""
+    if labels is None:
+        labels = ['A', 'O', 'B']
+    angle_rad = np.deg2rad(angle_deg)
+    r = 2.0  # longueur des rayons
+
+    # Deux rayons depuis O=(0,0)
+    ax_end = (r, 0)                                      # rayon horizontal
+    bx_end = (r * np.cos(angle_rad), r * np.sin(angle_rad))  # rayon incliné
+
+    fig = go.Figure()
+
+    # Rayon OA
+    fig.add_trace(go.Scatter(x=[0, ax_end[0]], y=[0, ax_end[1]],
+        mode='lines+markers', line=dict(color='#FF6B35', width=2.5),
+        marker=dict(size=8, color='#FF6B35'), showlegend=False))
+    # Rayon OB
+    fig.add_trace(go.Scatter(x=[0, bx_end[0]], y=[0, bx_end[1]],
+        mode='lines+markers', line=dict(color='#FF6B35', width=2.5),
+        marker=dict(size=8, color='#FF6B35'), showlegend=False))
+
+    # Arc de cercle
+    arc_r = r * 0.4
+    theta_arc = np.linspace(0, angle_rad, 80)
+    fig.add_trace(go.Scatter(
+        x=arc_r * np.cos(theta_arc), y=arc_r * np.sin(theta_arc),
+        mode='lines', line=dict(color='#2196F3', width=2, dash='dot'),
+        showlegend=False))
+
+    # Annotations des points
+    offset = 0.2
+    for pt, lbl in zip([(ax_end[0], ax_end[1]), (0, 0), (bx_end[0], bx_end[1])], labels):
+        fig.add_annotation(x=pt[0], y=pt[1], text=lbl, showarrow=False,
+                           font=dict(size=16, color='#FF6B35', family='bold'),
+                           xshift=offset * 40, yshift=offset * 40)
+
+    # Annotation de la valeur de l'angle
+    mid_angle = angle_rad / 2
+    fig.add_annotation(
+        x=arc_r * 1.4 * np.cos(mid_angle), y=arc_r * 1.4 * np.sin(mid_angle),
+        text=f'{angle_deg:.0f}°', showarrow=False,
+        font=dict(size=14, color='#2196F3'))
+
+    pad = r * 0.4 + 0.5
+    fig.update_layout(
+        **_base_layout(f'Angle de {angle_deg:.0f}°'),
+        xaxis=dict(**_axis_cfg(-pad, r + pad, 'x'), scaleanchor='y'),
+        yaxis=_axis_cfg(-pad, r * np.sin(angle_rad) + pad, 'y'),
+    )
+    fig.add_hline(y=0, line_color='black', line_width=1)
+    fig.add_vline(x=0, line_color='black', line_width=1)
+    return fig
+
+
+def _create_polygon(n_sides: int = 5, radius: float = 2.0) -> go.Figure:
+    """Trace un polygone régulier à n côtés."""
+    angles = np.linspace(np.pi / 2, np.pi / 2 + 2 * np.pi, n_sides + 1)
+    xs = radius * np.cos(angles)
+    ys = radius * np.sin(angles)
+    labels = [chr(65 + i) for i in range(n_sides)]  # A, B, C, ...
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=xs, y=ys, mode='lines+markers',
+        line=dict(color='#FF6B35', width=2.5),
+        marker=dict(size=9, color='#FF6B35'),
+        showlegend=False,
+    ))
+    for i, lbl in enumerate(labels):
+        fig.add_annotation(x=xs[i], y=ys[i], text=lbl, showarrow=False,
+                           font=dict(size=14, color='#FF6B35', family='bold'),
+                           xshift=xs[i] * 15, yshift=ys[i] * 15)
+
+    pad = radius * 0.35 + 0.3
+    names = {3: 'Triangle équilatéral', 4: 'Carré', 5: 'Pentagone',
+             6: 'Hexagone', 7: 'Heptagone', 8: 'Octogone'}
+    title = names.get(n_sides, f'Polygone régulier ({n_sides} côtés)')
+    fig.update_layout(
+        **_base_layout(title),
+        xaxis=dict(**_axis_cfg(-radius - pad, radius + pad, 'x'), scaleanchor='y'),
+        yaxis=_axis_cfg(-radius - pad, radius + pad, 'y'),
+    )
+    fig.add_hline(y=0, line_color='black', line_width=1)
+    fig.add_vline(x=0, line_color='black', line_width=1)
+    return fig
+
+
 def auto_draw_figure(detection: dict):
     """
     Trace automatiquement la figure détectée.
@@ -657,10 +849,11 @@ def auto_draw_figure(detection: dict):
         # Priorité absolue : si une formule est présente, tracer la fonction
         func_py = params.get('function_py') or params.get('function')
         if func_py:
-            return create_interactive_function(func_py)
+            x_range = params.get('x_range', (-5, 5))
+            extra = params.get('extra_functions', [])
+            return create_interactive_function(func_py, x_range=x_range, extra_functions=extra or None)
 
         if fig_type == 'triangle':
-            # Utiliser les coordonnées extraites si disponibles
             coords = params.get('coords', {})
             labels = params.get('points', ['A', 'B', 'C'])[:3]
             if len(coords) >= 3:
@@ -686,13 +879,18 @@ def auto_draw_figure(detection: dict):
             return _create_vector()
 
         elif fig_type == 'angle':
+            angle_deg = params.get('angle_deg', 45.0)
+            return _create_angle(angle_deg)
+
+        elif fig_type == 'polygone':
+            n = params.get('n_sides', 5)
+            return _create_polygon(n)
+
+        elif fig_type == 'general':
             return _create_repere()
 
-        elif fig_type in ('polygone', 'general'):
-            return _create_repere()
-
-    except Exception:
-        pass
+    except Exception as e:
+        st.warning(f"⚠️ Impossible de tracer la figure : {e}")
 
     return None
 
