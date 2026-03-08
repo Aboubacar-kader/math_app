@@ -30,17 +30,21 @@ class VectorStoreManager:
 
     def _open_or_reset_client(self) -> QdrantClient:
         """Ouvre le client Qdrant. Si la base est corrompue/incompatible, la supprime et recrée."""
-        qdrant_path = settings.QDRANT_PATH
+        qdrant_path = Path(settings.QDRANT_PATH).resolve()
+        # Sécurité : le répertoire doit rester dans data/
+        base_data = Path("data").resolve()
+        if not str(qdrant_path).startswith(str(base_data)):
+            raise RuntimeError("QDRANT_PATH en dehors du répertoire data/ — refusé.")
         try:
-            return QdrantClient(path=qdrant_path)
+            return QdrantClient(path=str(qdrant_path))
         except Exception:
             # Base corrompue ou version incompatible → supprimer et recréer
             try:
                 shutil.rmtree(qdrant_path, ignore_errors=True)
-                Path(qdrant_path).mkdir(parents=True, exist_ok=True)
+                qdrant_path.mkdir(parents=True, exist_ok=True)
             except Exception:
                 pass
-            return QdrantClient(path=qdrant_path)
+            return QdrantClient(path=str(qdrant_path))
     
     def _ensure_collection_exists(self):
         """Crée la collection si elle n'existe pas, ou la recrée si la dimension a changé"""

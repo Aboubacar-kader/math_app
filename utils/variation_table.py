@@ -9,6 +9,37 @@ from typing import List, Optional, Dict
 
 
 # ─────────────────────────────────────────────────────────────
+# SÉCURITÉ — échappement SVG/HTML
+# ─────────────────────────────────────────────────────────────
+
+_SVG_ESCAPE = str.maketrans({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#x27;',
+})
+
+# Caractères autorisés dans les valeurs mathématiques du tableau
+_ALLOWED_VALUE_RE = re.compile(
+    r'^[+\-\d\s\.,∞–\+\−/\u221e\u002b\u2212\u2013\u2014]*$'
+)
+
+
+def _safe(value: str, max_len: int = 20) -> str:
+    """
+    Assainit une valeur avant insertion dans le SVG.
+    - Tronque à max_len caractères
+    - Si la valeur contient des caractères non mathématiques,
+      échappe les caractères HTML spéciaux (défense en profondeur)
+    """
+    value = str(value).strip()[:max_len]
+    if not _ALLOWED_VALUE_RE.match(value):
+        value = value.translate(_SVG_ESCAPE)
+    return value
+
+
+# ─────────────────────────────────────────────────────────────
 # PARSEUR
 # ─────────────────────────────────────────────────────────────
 
@@ -173,15 +204,16 @@ def render_variation_table(
     for i, xl in enumerate(x_labels):
         parts.append(
             f'  <text x="{xc[i]}" y="{y_lbl_x}" text-anchor="middle"'
-            f' dominant-baseline="middle" font-size="13">{xl}</text>'
+            f' dominant-baseline="middle" font-size="13">{_safe(xl)}</text>'
         )
 
     # ── Rangée f'(x) ─────────────────────────────────────────
     for i, sign in enumerate(signs):
+        safe_sign = _safe(sign, max_len=1)
         color = '#1a56db' if sign == '+' else '#c81e1e'
         parts.append(
             f'  <text x="{ic[i]}" y="{y_lbl_fp}" text-anchor="middle"'
-            f' dominant-baseline="middle" font-size="14" fill="{color}" font-weight="bold">{sign}</text>'
+            f' dominant-baseline="middle" font-size="14" fill="{color}" font-weight="bold">{safe_sign}</text>'
         )
     for i, xl in enumerate(x_labels):
         if xl.strip() not in _INFINITY_VALS:
@@ -199,7 +231,7 @@ def render_variation_table(
             dy, baseline = 4, 'hanging'
         parts.append(
             f'  <text x="{xc[i]}" y="{ypos + dy}" text-anchor="middle"'
-            f' dominant-baseline="{baseline}" font-size="{FONT_F}" font-weight="bold">{fv}</text>'
+            f' dominant-baseline="{baseline}" font-size="{FONT_F}" font-weight="bold">{_safe(fv)}</text>'
         )
 
     # ── Rangée f — flèches ───────────────────────────────────
