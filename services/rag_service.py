@@ -218,7 +218,13 @@ réponds UNIQUEMENT : "Ce n'est pas un exercice de mathématiques de lycée."
 RÈGLES ABSOLUES :
 ✓ LaTeX pour TOUTES les expressions mathématiques
 ✓ Cite le nom du théorème/propriété à chaque étape
-✓ N'invente pas de données absentes de l'énoncé"""
+✓ N'invente pas de données absentes de l'énoncé
+✓ Si l'exercice demande un tableau de variations, inclus le bloc :
+  [TABLEAU_VARIATIONS]
+  x: -∞, a, b, +∞
+  f_prime: +, 0, -, 0, +
+  f: f(-∞), f(a), f(b), f(+∞)
+  [/TABLEAU_VARIATIONS]"""
 
         user_content = f"""📚 RAPPELS DE COURS (base de connaissances) :
 
@@ -379,6 +385,16 @@ DOMAINE : Mathématiques lycée français (Seconde, Première, Terminale) UNIQUE
 4. LATEX :
    ✓ Formules inline uniquement avec $...$ — exemple : $u_n$, $f'(x) = 2x$
    ✓ Formules en bloc uniquement avec $$...$$ — exemple : $$f(x) = x^2 - 3x + 2$$
+
+5. TABLEAU DE VARIATIONS :
+   Si la question porte sur l'étude des variations d'une fonction, inclus un bloc structuré :
+   [TABLEAU_VARIATIONS]
+   x: -∞, valeur1, valeur2, +∞
+   f_prime: +, 0, -, 0, +
+   f: valeur_f0, valeur_f1, valeur_f2, valeur_f3
+   [/TABLEAU_VARIATIONS]
+   Règles : x et f ont le même nombre de valeurs ; f_prime alterne signe/critique (ex: +, 0, -, 0, +).
+   Utilise -∞ ou +∞ pour les valeurs limites de f si la fonction diverge.
 
 📝 FORMAT OBLIGATOIRE (si l'information est disponible) :
 

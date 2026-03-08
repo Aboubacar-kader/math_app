@@ -652,13 +652,27 @@ Le document fourni est le contexte de référence. Lis-le entièrement et répon
                 except Exception as e:
                     add_to_context(section_key, "assistant", f"❌ Erreur : {str(e)}")
 
-    # Détecter si un graphique est demandé
-    # On combine : question + doc_context + début de la réponse LLM
+    # ── Post-traitement de la dernière réponse ──────────────────
+    from utils.variation_table import parse_variation_block, strip_variation_block
+
     history_key = f'chat_history_{section_key}'
     last_llm_response = next(
         (m['content'] for m in reversed(st.session_state.get(history_key, []))
          if m.get('role') == 'assistant'), ''
     )
+
+    # Détecter un tableau de variations dans la réponse
+    vt_data = parse_variation_block(last_llm_response)
+    if vt_data:
+        st.session_state[f'variation_table_{section_key}'] = vt_data
+        # Supprimer le bloc brut du texte affiché dans le chat
+        history = st.session_state.get(history_key, [])
+        for msg in reversed(history):
+            if msg.get('role') == 'assistant':
+                msg['content'] = strip_variation_block(msg['content'])
+                break
+    else:
+        st.session_state.pop(f'variation_table_{section_key}', None)
     detection_text = ' '.join(filter(None, [
         question,
         doc_context[:400] if doc_context else '',
@@ -734,6 +748,18 @@ def render_continuous_chat(
             else:
                 st.markdown(f"**📐 Figure — {detection.get('figure_type', '').capitalize()}**")
             st.plotly_chart(fig_plot, use_container_width=True)
+
+    # Tableau de variations (si détecté dans la dernière réponse)
+    vt_key = f'variation_table_{section_key}'
+    if st.session_state.get(vt_key):
+        from utils.variation_table import render_variation_table
+        vt = st.session_state[vt_key]
+        try:
+            st.markdown("**📊 Tableau de variations**")
+            html = render_variation_table(vt['x_labels'], vt['signs'], vt['f_values'])
+            st.markdown(html, unsafe_allow_html=True)
+        except Exception:
+            pass
 
     # Lecture vocale automatique si mode vocal activé
     tts_key = f'pending_tts_{section_key}'

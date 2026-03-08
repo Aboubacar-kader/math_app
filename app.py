@@ -73,6 +73,10 @@ def init_session_state():
     if 'show_uploader' not in st.session_state:
         st.session_state.show_uploader = False
 
+    # Paramètres persistants (ne jamais écraser si déjà définis)
+    if 'setting_voice_mode' not in st.session_state:
+        st.session_state.setting_voice_mode = False
+
 
 def create_new_conversation(first_message: str = None):
     """Crée une nouvelle conversation"""
@@ -398,7 +402,8 @@ def main():
             st.markdown("---")
             st.markdown("### ⚙️ Paramètres")
             st.checkbox("Afficher les sources", value=True, key="show_sources")
-            st.checkbox("Mode vocal", value=False, key="voice_mode")
+            st.checkbox("Mode vocal", key="setting_voice_mode",
+                        help="Répond par voix + micro activé")
             st.checkbox("Sauvegarder automatiquement", value=True, key="auto_save")
         
         # Footer
