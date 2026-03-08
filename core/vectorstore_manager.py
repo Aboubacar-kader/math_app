@@ -8,6 +8,8 @@ from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, Fi
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from typing import List, Dict, Any, Optional
 import uuid
+import shutil
+from pathlib import Path
 from config.settings import settings
 from core.llm_manager import llm_manager
 
@@ -22,9 +24,23 @@ class VectorStoreManager:
     """
     
     def __init__(self):
-        self.client = QdrantClient(path=settings.QDRANT_PATH)
+        self.client = self._open_or_reset_client()
         self.collection_name = settings.QDRANT_COLLECTION_NAME
         self._ensure_collection_exists()
+
+    def _open_or_reset_client(self) -> QdrantClient:
+        """Ouvre le client Qdrant. Si la base est corrompue/incompatible, la supprime et recrée."""
+        qdrant_path = settings.QDRANT_PATH
+        try:
+            return QdrantClient(path=qdrant_path)
+        except Exception:
+            # Base corrompue ou version incompatible → supprimer et recréer
+            try:
+                shutil.rmtree(qdrant_path, ignore_errors=True)
+                Path(qdrant_path).mkdir(parents=True, exist_ok=True)
+            except Exception:
+                pass
+            return QdrantClient(path=qdrant_path)
     
     def _ensure_collection_exists(self):
         """Crée la collection si elle n'existe pas, ou la recrée si la dimension a changé"""
