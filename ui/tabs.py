@@ -670,6 +670,10 @@ Le document fourni est le contexte de référence. Lis-le entièrement et répon
     else:
         st.session_state.pop(f'figure_detection_{section_key}', None)
 
+    # TTS automatique si mode vocal activé
+    if st.session_state.get('setting_voice_mode') and last_llm_response:
+        st.session_state[f'pending_tts_{section_key}'] = last_llm_response
+
     st.rerun()
 
 
@@ -730,6 +734,15 @@ def render_continuous_chat(
             else:
                 st.markdown(f"**📐 Figure — {detection.get('figure_type', '').capitalize()}**")
             st.plotly_chart(fig_plot, use_container_width=True)
+
+    # Lecture vocale automatique si mode vocal activé
+    tts_key = f'pending_tts_{section_key}'
+    if st.session_state.get(tts_key) and st.session_state.get('setting_voice_mode'):
+        audio_html = voice_service.text_to_speech(st.session_state[tts_key], auto_play=True)
+        if audio_html:
+            st.markdown("🔊 *Lecture de la réponse...*")
+            st.markdown(audio_html, unsafe_allow_html=True)
+        del st.session_state[tts_key]
 
     # Indicateur de contexte
     '''history_key = f"chat_history_{section_key}"

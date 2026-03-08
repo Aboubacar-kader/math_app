@@ -27,19 +27,28 @@ class VectorStoreManager:
         self._ensure_collection_exists()
     
     def _ensure_collection_exists(self):
-        """Crée la collection si elle n'existe pas"""
+        """Crée la collection si elle n'existe pas, ou la recrée si la dimension a changé"""
+        # Dimension réelle du modèle d'embeddings actuel
+        test_embedding = llm_manager.embeddings.embed_query("test")
+        expected_size = len(test_embedding)
+
         collections = self.client.get_collections().collections
         collection_names = [col.name for col in collections]
-        
+
+        if self.collection_name in collection_names:
+            # Vérifier que la dimension stockée correspond
+            info = self.client.get_collection(self.collection_name)
+            stored_size = info.config.params.vectors.size
+            if stored_size != expected_size:
+                # Dimension incompatible → supprimer et recréer
+                self.client.delete_collection(self.collection_name)
+                collection_names = []  # forcer la création ci-dessous
+
         if self.collection_name not in collection_names:
-            # Obtenir la dimension des embeddings
-            test_embedding = llm_manager.embeddings.embed_query("test")
-            vector_size = len(test_embedding)
-            
             self.client.create_collection(
                 collection_name=self.collection_name,
                 vectors_config=VectorParams(
-                    size=vector_size,
+                    size=expected_size,
                     distance=Distance.COSINE
                 )
             )
