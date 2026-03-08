@@ -47,6 +47,6 @@ pydantic-settings>=2.5.0
 # Utilities
 # =========================
 numpy>=2.0.0
-requests==2.31.0
+requests>=2.32.4
 matplotlib>=3.7.0
 plotly>=5.0.0
