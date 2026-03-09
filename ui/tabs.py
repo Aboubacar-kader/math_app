@@ -139,31 +139,78 @@ def fix_latex_for_streamlit(text: str) -> str:
 
     # Commandes LaTeX hors $...$ → symboles Unicode lisibles
     _LATEX_UNICODE = [
+        # Opérateurs
         (r'\\times',          '×'),
         (r'\\cdot',           '·'),
         (r'\\div',            '÷'),
+        (r'\\pm',             '±'),
+        # Flèches / relations logiques
         (r'\\Rightarrow',     '⇒'),
         (r'\\Leftarrow',      '⇐'),
         (r'\\Leftrightarrow', '⟺'),
         (r'\\rightarrow',     '→'),
         (r'\\leftarrow',      '←'),
+        (r'\\to\b',           '→'),
         (r'\\implies',        '⇒'),
         (r'\\iff',            '⟺'),
+        # Comparaisons
         (r'\\neq',            '≠'),
         (r'\\leq',            '≤'),
         (r'\\geq',            '≥'),
         (r'\\approx',         '≈'),
+        (r'\\equiv',          '≡'),
+        # Symboles spéciaux
         (r'\\infty',          '∞'),
-        (r'\\pm',             '±'),
         (r'\\in\b',           '∈'),
+        (r'\\notin\b',        '∉'),
         (r'\\subset',         '⊂'),
+        (r'\\cup',            '∪'),
+        (r'\\cap',            '∩'),
+        (r'\\emptyset',       '∅'),
+        # Ensembles
         (r'\\mathbb\{R\}',    'ℝ'),
         (r'\\mathbb\{N\}',    'ℕ'),
         (r'\\mathbb\{Z\}',    'ℤ'),
         (r'\\mathbb\{Q\}',    'ℚ'),
         (r'\\mathbb\{C\}',    'ℂ'),
+        # Quantificateurs
         (r'\\forall',         '∀'),
         (r'\\exists',         '∃'),
+        # Fonctions mathématiques (apparaissent souvent sans $)
+        (r'\\sin\b',          'sin'),
+        (r'\\cos\b',          'cos'),
+        (r'\\tan\b',          'tan'),
+        (r'\\arcsin\b',       'arcsin'),
+        (r'\\arccos\b',       'arccos'),
+        (r'\\arctan\b',       'arctan'),
+        (r'\\ln\b',           'ln'),
+        (r'\\log\b',          'log'),
+        (r'\\exp\b',          'exp'),
+        (r'\\max\b',          'max'),
+        (r'\\min\b',          'min'),
+        (r'\\sup\b',          'sup'),
+        (r'\\inf\b',          'inf'),
+        # Lettres grecques courantes
+        (r'\\alpha\b',        'α'),
+        (r'\\beta\b',         'β'),
+        (r'\\gamma\b',        'γ'),
+        (r'\\delta\b',        'δ'),
+        (r'\\Delta\b',        'Δ'),
+        (r'\\epsilon\b',      'ε'),
+        (r'\\varepsilon\b',   'ε'),
+        (r'\\theta\b',        'θ'),
+        (r'\\lambda\b',       'λ'),
+        (r'\\mu\b',           'μ'),
+        (r'\\pi\b',           'π'),
+        (r'\\sigma\b',        'σ'),
+        (r'\\omega\b',        'ω'),
+        # Intégration / sommes
+        (r'\\sum\b',          '∑'),
+        (r'\\prod\b',         '∏'),
+        (r'\\int\b',          '∫'),
+        # Exposants courants hors $
+        (r'\^2\b',            '²'),
+        (r'\^3\b',            '³'),
     ]
 
     def _wrap_raw_latex(segment: str) -> str:
@@ -177,6 +224,28 @@ def fix_latex_for_streamlit(text: str) -> str:
         # \lim_{x→a} → lim
         segment = re.sub(r'\\lim_\{([^}]{1,200})\}', r'lim(\1)', segment)
         segment = re.sub(r'\\lim\b', 'lim', segment)
+        # \text{...} → ... (supprimer commande, garder contenu)
+        segment = re.sub(r'\\text\{([^}]{1,200})\}', r'\1', segment)
+        # ^{n} → exposant lisible (ex: x^{2} → x²)
+        _exp_map = {'0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+                    '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+                    'n': 'ⁿ'}
+        def _replace_exp(m):
+            inner = m.group(1)
+            if len(inner) == 1 and inner in _exp_map:
+                return _exp_map[inner]
+            return f'^({inner})'
+        segment = re.sub(r'\^\{([^}]{1,20})\}', _replace_exp, segment)
+        # _{n} → indice lisible (ex: x_{1} → x₁)
+        _sub_map = {'0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄',
+                    '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉',
+                    'n': 'ₙ', 'i': 'ᵢ', 'k': 'ₖ'}
+        def _replace_sub(m):
+            inner = m.group(1)
+            if len(inner) == 1 and inner in _sub_map:
+                return _sub_map[inner]
+            return f'_({inner})'
+        segment = re.sub(r'_\{([^}]{1,20})\}', _replace_sub, segment)
         return segment
 
     parts = MATH_SPLIT.split(text)
