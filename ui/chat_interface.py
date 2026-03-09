@@ -625,6 +625,12 @@ Question de l'utilisateur : {query_with_context}
 
             ChatHistory.add_message("assistant", response)
 
+            # TTS automatique si mode vocal activé
+            if st.session_state.get('setting_voice_mode'):
+                audio_html = voice_service.text_to_speech(response, auto_play=True)
+                if audio_html:
+                    st.markdown(audio_html, unsafe_allow_html=True)
+
             # Boutons
             col1, col2, col3 = st.columns([1, 1, 8])
 

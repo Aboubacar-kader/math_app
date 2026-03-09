@@ -261,32 +261,113 @@ class VoiceService:
 
     def _clean_text_for_speech(self, text: str) -> str:
         """
-        Nettoie le texte avant la synthèse vocale.
-
-        Args:
-            text: Texte brut
-
-        Returns:
-            Texte nettoyé
+        Nettoie le texte avant la synthèse vocale et convertit les
+        notations mathématiques en langage naturel français.
         """
-        # Supprimer LaTeX block
+        # Supprimer LaTeX block et inline
         text = re.sub(r'\$\$[^$]+\$\$', 'formule mathématique', text)
-
-        # Supprimer LaTeX inline
         text = re.sub(r'\$[^$]+\$', 'formule', text)
 
         # Supprimer markdown
         text = re.sub(r'[*_#`~>|]', '', text)
 
-        # Supprimer les emojis et symboles hors Latin-1
-        # [^\x00-\xFF] : garde ASCII + Latin-1 Supplement (couvre tout le français)
-        # Évite les gammes Unicode larges signalées comme "overly permissive" par CodeQL
-        text = re.sub(r'[^\x00-\xFF]', '', text)
+        # ── Symboles Unicode → langage naturel ──────────────────────────────
+        replacements = [
+            # Opérations
+            ('×', ' fois '),
+            ('÷', ' divisé par '),
+            ('±', ' plus ou moins '),
+            ('·', ' fois '),
+            # Comparaisons
+            ('≠', ' différent de '),
+            ('≤', ' inférieur ou égal à '),
+            ('≥', ' supérieur ou égal à '),
+            ('≈', ' environ égal à '),
+            ('≡', ' équivalent à '),
+            # Flèches / logique
+            ('→', ' tend vers '),
+            ('⇒', ' implique '),
+            ('⟺', ' équivaut à '),
+            # Ensembles
+            ('∈', ' appartient à '),
+            ('∉', ' n\'appartient pas à '),
+            ('⊂', ' inclus dans '),
+            ('∪', ' union '),
+            ('∩', ' intersection '),
+            ('∅', ' ensemble vide '),
+            ('ℝ', 'R'),
+            ('ℕ', 'N'),
+            ('ℤ', 'Z'),
+            ('ℚ', 'Q'),
+            ('ℂ', 'C'),
+            # Quantificateurs
+            ('∀', 'pour tout '),
+            ('∃', 'il existe '),
+            # Infini
+            ('∞', 'l\'infini'),
+            # Exposants Unicode → texte
+            ('²', ' au carré'),
+            ('³', ' au cube'),
+            ('⁴', ' à la puissance 4'),
+            ('⁵', ' à la puissance 5'),
+            ('⁶', ' à la puissance 6'),
+            ('⁷', ' à la puissance 7'),
+            ('⁸', ' à la puissance 8'),
+            ('⁹', ' à la puissance 9'),
+            ('ⁿ', ' à la puissance n'),
+            # Indices Unicode → texte
+            ('₀', ' zéro'),
+            ('₁', ' un'),
+            ('₂', ' deux'),
+            ('₃', ' trois'),
+            ('₄', ' quatre'),
+            ('₅', ' cinq'),
+            ('₆', ' six'),
+            ('₇', ' sept'),
+            ('₈', ' huit'),
+            ('₉', ' neuf'),
+            ('ₙ', ' n'),
+            # Racine
+            ('√', ' racine de '),
+            # Somme / produit / intégrale
+            ('∑', ' somme '),
+            ('∏', ' produit '),
+            ('∫', ' intégrale de '),
+            # Lettres grecques
+            ('α', 'alpha'),
+            ('β', 'bêta'),
+            ('γ', 'gamma'),
+            ('δ', 'delta'),
+            ('Δ', 'delta'),
+            ('ε', 'epsilon'),
+            ('θ', 'thêta'),
+            ('λ', 'lambda'),
+            ('μ', 'mu'),
+            ('π', 'pi'),
+            ('σ', 'sigma'),
+            ('ω', 'oméga'),
+        ]
+        for symbol, word in replacements:
+            text = text.replace(symbol, word)
+
+        # f(x) → f de x
+        text = re.sub(r'\b([a-zA-Z])\(([a-zA-Z])\)', r'\1 de \2', text)
+
+        # Fractions écrites a/b → a sur b (contexte math : entourées de lettres/chiffres)
+        text = re.sub(r'([A-Za-z0-9]+)/([A-Za-z0-9]+)', r'\1 sur \2', text)
+
+        # Séquences de lettres majuscules (noms de points/segments) : ABC → A B C
+        def _space_caps(m):
+            return ' '.join(list(m.group(0)))
+        text = re.sub(r'\b[A-Z]{2,4}\b', _space_caps, text)
 
         # Supprimer les liens
         text = re.sub(r'http\S+', '', text)
 
-        # Nettoyer les espaces
+        # Supprimer les caractères non prononçables restants (hors ASCII + accents français)
+        text = re.sub(r'[^\x00-\xFF]', '', text)
+
+        # Nettoyer les espaces multiples
         text = re.sub(r'\s+', ' ', text).strip()
 
         # Limiter la longueur (gTTS limite)
