@@ -22,7 +22,8 @@ _FORBIDDEN_PAT = re.compile(
     re.IGNORECASE
 )
 _ALLOWED_NAMES_PAT = re.compile(
-    r'\b(sin|cos|tan|sqrt|exp|log|abs|floor|ceil|arcsin|arccos|arctan|'
+    r'\b(sin|cos|tan|sinh|cosh|tanh|sqrt|cbrt|exp|log|log10|log2|abs|'
+    r'floor|ceil|sign|arcsin|arccos|arctan|arcsinh|arccosh|arctanh|'
     r'pi|np|x|e)\b'
 )
 _ALLOWED_CHARS_PAT = re.compile(r'[\d\s\+\-\*\/\%\(\)\.\,]')
@@ -48,8 +49,11 @@ _SAFE_AST_NODES = frozenset({
     _ast.UAdd, _ast.USub,
 })
 _SAFE_FUNC_NAMES = frozenset({
-    'sin', 'cos', 'tan', 'sqrt', 'exp', 'log', 'abs',
-    'floor', 'ceil', 'arcsin', 'arccos', 'arctan',
+    'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh',
+    'sqrt', 'cbrt', 'exp', 'log', 'log10', 'log2',
+    'abs', 'floor', 'ceil', 'sign',
+    'arcsin', 'arccos', 'arctan',
+    'arcsinh', 'arccosh', 'arctanh',
 })
 _SAFE_VAR_NAMES = frozenset({'x', 'pi', 'e', 'np'})
 
@@ -145,11 +149,21 @@ def detect_figure_needed(text: str) -> Dict[str, any]:
 
     # Si "fonction" est mentionné, vérifier si c'est une fonction nommée
     # (avant de tester 'rectangle'/'carré' pour éviter la confusion "fonction carré")
+    # Utiliser des word-boundaries pour les noms courts (exp, log, sin…) afin d'éviter
+    # de matcher 'exp' à l'intérieur d'une expression composée comme ln(1+exp(x)).
+    _SHORT_FUNC_NAMES = {'exp', 'log', 'sin', 'cos', 'tan', 'abs', 'floor'}
     named_func_formula = None
     named_func_display = None
     if 'fonction' in text_lower or 'courbe' in text_lower or 'graphe' in text_lower:
         for name, (formula, display) in NAMED_FUNCTIONS.items():
-            if name in text_lower:
+            if name in _SHORT_FUNC_NAMES:
+                # Word-boundary : évite de matcher 'exp' dans 'ln(1+exp(x))'
+                # quand le mot n'est pas seul (ex : "représente l'exponentielle")
+                if re.search(rf'(?<![a-zA-Z(]){re.escape(name)}(?!\s*\()', text_lower):
+                    named_func_formula = formula
+                    named_func_display = display
+                    break
+            elif name in text_lower:
                 named_func_formula = formula
                 named_func_display = display
                 break
@@ -210,6 +224,23 @@ def _to_python_expr(expr: str) -> str:
     # Exposants Unicode
     expr = expr.replace('²', '**2').replace('³', '**3')
     expr = expr.replace('^', '**')
+    # Notations françaises hyperbolicques : sh→sinh, ch→cosh, th→tanh
+    expr = re.sub(r'\bsh\b', 'sinh', expr)
+    expr = re.sub(r'\bch\b', 'cosh', expr)
+    expr = re.sub(r'\bth\b', 'tanh', expr)
+    # Logarithmes : ln→log, log₁₀→log10, lg→log10
+    expr = re.sub(r'\bln\b', 'log', expr)
+    expr = re.sub(r'\blog_?10\b', 'log10', expr)
+    expr = re.sub(r'\blog_?2\b', 'log2', expr)
+    expr = re.sub(r'\blg\b', 'log10', expr)
+    # Racine cubique : cbrt(x) ou ∛x
+    expr = expr.replace('∛', 'cbrt(')  # sera fermé par l'utilisateur ou implicitement
+    # Signe : sgn→sign
+    expr = re.sub(r'\bsgn\b', 'sign', expr)
+    # Arc- : asin→arcsin, acos→arccos, atan→arctan
+    expr = re.sub(r'\basin\b', 'arcsin', expr)
+    expr = re.sub(r'\bacos\b', 'arccos', expr)
+    expr = re.sub(r'\batan\b', 'arctan', expr)
     # Multiplication implicite : 2x → 2*x, 3x² → 3*x**2, 2(x+1) → 2*(x+1)
     expr = re.sub(r'(\d)(x)', r'\1*x', expr)
     expr = re.sub(r'(\d)\(', r'\1*(', expr)
@@ -256,6 +287,26 @@ def extract_parameters(text: str, figure_type: str) -> dict:
                 extra_funcs.append((raw, py, name))
     if extra_funcs:
         params['extra_functions'] = extra_funcs
+
+    # ── Formule standalone sans f(x)= : "la fonction suivante : ln(1+exp(x))" ──
+    # Aussi : "f : x → expr", "la courbe de expr", ": expr" en fin de phrase
+    if first_func:
+        standalone_patterns = [
+            r'suivante\s*:?\s*([^\n;,]{2,120})',          # "la fonction suivante : expr"
+            r'[fghFGH]\s*:\s*x\s*[→↦]\s*([^\n;,]{2,120})', # "f : x → expr"
+            r'la\s+fonction\s*:?\s*([^\n;,]{2,120})',     # "la fonction : expr"
+        ]
+        for pat in standalone_patterns:
+            m = re.search(pat, text, re.IGNORECASE)
+            if m:
+                raw = _clean_formula(m.group(1).strip())
+                if len(raw) >= 2:
+                    py = _to_python_expr(raw)
+                    if py:
+                        params['function'] = raw
+                        params['function_py'] = py
+                        params['function_name'] = 'f(x)'
+                        break
 
     # ── Plage x_range : "sur [-3, 5]", "pour x ∈ [-3, 5]", "x ∈ [a, b]" ────
     _num = r'-?\d+(?:[.,]\d+)?'
@@ -519,11 +570,27 @@ def _eval_func(func_str: str, x: np.ndarray) -> Optional[np.ndarray]:
     """Évalue une expression Python sur un tableau numpy. Retourne None si échec."""
     if not _is_safe_formula(func_str):
         return None
-    ns = {'x': x, 'np': np, 'sin': np.sin, 'cos': np.cos, 'tan': np.tan,
-          'sqrt': np.sqrt, 'exp': np.exp, 'log': np.log,
-          'floor': np.floor, 'ceil': np.ceil, 'abs': np.abs,
-          'arcsin': np.arcsin, 'arccos': np.arccos, 'arctan': np.arctan,
-          'pi': np.pi, 'e': np.e, '__builtins__': None}
+    ns = {
+        'x': x, 'np': np,
+        # Trigonométrie
+        'sin': np.sin, 'cos': np.cos, 'tan': np.tan,
+        'arcsin': np.arcsin, 'arccos': np.arccos, 'arctan': np.arctan,
+        # Hyperboliques
+        'sinh': np.sinh, 'cosh': np.cosh, 'tanh': np.tanh,
+        'arcsinh': np.arcsinh, 'arccosh': np.arccosh, 'arctanh': np.arctanh,
+        # Exponentielles / Logarithmes
+        'exp': np.exp,
+        'log': np.log, 'log10': np.log10, 'log2': np.log2,
+        # Racines
+        'sqrt': np.sqrt,
+        'cbrt': np.cbrt,
+        # Divers
+        'abs': np.abs, 'sign': np.sign,
+        'floor': np.floor, 'ceil': np.ceil,
+        # Constantes
+        'pi': np.pi, 'e': np.e,
+        '__builtins__': None,
+    }
     try:
         code = _compile_safe_formula(func_str)
         result = eval(code, ns)  # noqa: S307 — AST validé, espace de noms restreint

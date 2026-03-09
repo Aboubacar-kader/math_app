@@ -1,6 +1,6 @@
 """
 Gestionnaire du modèle de langage (LLM).
-Utilise l'API 1min.ai (GPT-4o) pour les réponses.
+Utilise l'API OpenAI (chat/completions) pour les réponses.
 Utilise HuggingFace sentence-transformers pour les embeddings (local, gratuit).
 """
 
@@ -15,24 +15,24 @@ logger = get_logger(__name__)
 
 def call_1minai(system_prompt: str, user_content: str, retries: int = 2) -> str:
     """
-    Appelle l'API 1min.ai avec system + user combinés.
+    Appelle l'API OpenAI — format standard chat/completions.
     Retourne le texte de la réponse. Retry automatique sur rate limit (429).
     """
     import time
-    url = f"{settings.MIN_AI_BASE_URL}/api/chat-with-ai"
+    url = f"{settings.MIN_AI_BASE_URL.rstrip('/')}/chat/completions"
     headers = {
         "Content-Type": "application/json",
-        "API-KEY": settings.MIN_AI_API_KEY,
+        "Authorization": f"Bearer {settings.MIN_AI_API_KEY.strip()}",
     }
-    full_prompt = f"{system_prompt}\n\n{user_content}" if system_prompt else user_content
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": user_content})
+
     payload = {
-        "type": "CHAT_WITH_AI",
         "model": settings.MIN_AI_MODEL,
-        "promptObject": {
-            "prompt": full_prompt,
-            "isMixed": False,
-            "webSearch": False,
-        },
+        "messages": messages,
+        "temperature": settings.MIN_AI_TEMPERATURE,
     }
 
     for attempt in range(retries + 1):
@@ -48,19 +48,20 @@ def call_1minai(system_prompt: str, user_content: str, retries: int = 2) -> str:
             response.raise_for_status()
             data = response.json()
 
-            # Extraire le texte selon le format de la réponse
-            result_obj = data.get("aiRecord", {}).get("aiRecordDetail", {}).get("resultObject")
-            if isinstance(result_obj, list) and result_obj:
-                return result_obj[0]
-            elif isinstance(result_obj, str) and result_obj:
-                return result_obj
-            else:
-                # Log interne uniquement — ne pas exposer le contenu de la réponse
-                logger.error("Format réponse inattendu : %s", str(data)[:300])
-                raise ValueError("Format de réponse inattendu")
+            # Format standard OpenAI : choices[0].message.content
+            content = (
+                data.get("choices", [{}])[0]
+                    .get("message", {})
+                    .get("content", "")
+            )
+            if content:
+                return content
+
+            # Log interne uniquement — ne pas exposer le contenu de la réponse
+            logger.error("Format réponse inattendu : %s", str(data)[:300])
+            raise ValueError("Format de réponse inattendu")
 
         except requests.HTTPError as e:
-            # Log interne avec le code HTTP, sans exposer le corps de la réponse
             logger.warning("HTTP %s — tentative %d", e.response.status_code, attempt + 1)
             if attempt < retries:
                 time.sleep(2)
