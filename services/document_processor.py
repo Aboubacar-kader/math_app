@@ -14,33 +14,37 @@ from config.settings import settings
 from core.llm_manager import call_1minai
 
 def _parse_vision_response(data: dict) -> str:
-    """Extrait le texte d'une réponse JSON 1min.ai (robuste aux changements de structure)."""
-    # Chemin principal
+    """Extrait le texte d'une réponse JSON OpenAI vision (choices[0].message.content)."""
     try:
-        text = data["aiRecord"]["aiRecordDetail"]["resultObject"][0]
-        if isinstance(text, str) and text.strip():
-            return text.strip()
+        return data["choices"][0]["message"]["content"].strip()
     except (KeyError, IndexError, TypeError):
-        pass
-    # Chemins alternatifs
-    for path in [
-        ["aiRecord", "aiRecordDetail", "resultObject"],
-        ["result"],
-        ["content"],
-        ["text"],
-        ["message", "content"],
-    ]:
-        try:
-            node = data
-            for key in path:
-                node = node[key]
-            if isinstance(node, list):
-                node = node[0]
-            if isinstance(node, str) and node.strip():
-                return node.strip()
-        except (KeyError, IndexError, TypeError):
-            continue
-    return ""
+        return ""
+
+
+def _call_vision(b64_image: str, prompt: str, mime: str = "image/png") -> str:
+    """Appelle l'API OpenAI vision avec une image base64. Retourne le texte extrait."""
+    import requests as _requests
+    url = f"{settings.MIN_AI_BASE_URL.rstrip('/')}/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {settings.MIN_AI_API_KEY.strip()}",
+    }
+    payload = {
+        "model": settings.MIN_AI_MODEL,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64_image}"}},
+                ],
+            }
+        ],
+        "max_tokens": 4096,
+    }
+    response = _requests.post(url, headers=headers, json=payload, timeout=90)
+    response.raise_for_status()
+    return _parse_vision_response(response.json())
 
 
 class DocumentProcessor:
@@ -186,10 +190,9 @@ class DocumentProcessor:
             return ""
 
     def _ocr_pdf_page(self, page, page_num: int) -> str:
-        """Convertit une page PDF en image et l'envoie à la vision IA pour OCR."""
+        """Convertit une page PDF en image et l'envoie à l'API OpenAI vision pour OCR."""
         try:
             import base64
-            import requests as _requests
 
             # Rendre la page en image (pdfplumber utilise pdfminer/Pillow)
             pil_image = page.to_image(resolution=150).original
@@ -197,29 +200,13 @@ class DocumentProcessor:
             pil_image.save(buf, format="PNG")
             b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
 
-            url = f"{settings.MIN_AI_BASE_URL}/api/chat-with-ai"
-            headers = {
-                "Content-Type": "application/json",
-                "API-KEY": settings.MIN_AI_API_KEY,
-            }
-            payload = {
-                "type": "CHAT_WITH_AI",
-                "model": settings.MIN_AI_MODEL,
-                "promptObject": {
-                    "prompt": (
-                        "Transcris intégralement tout le texte et toutes les formules "
-                        "mathématiques de cette page de document. "
-                        "Conserve la structure : titres, numéros, tableaux, formules "
-                        "(notation standard : f(x) = ...). Ne résous rien, transcris uniquement."
-                    ),
-                    "isMixed": True,
-                    "imageList": [b64],
-                    "webSearch": False,
-                },
-            }
-            response = _requests.post(url, headers=headers, json=payload, timeout=90)
-            response.raise_for_status()
-            return _parse_vision_response(response.json())
+            prompt = (
+                "Transcris intégralement tout le texte et toutes les formules "
+                "mathématiques de cette page de document. "
+                "Conserve la structure : titres, numéros, tableaux, formules "
+                "(notation standard : f(x) = ...). Ne résous rien, transcris uniquement."
+            )
+            return _call_vision(b64, prompt)
         except Exception as e:
             st.warning(f"⚠️ OCR page {page_num} échoué : {e}")
             return ""
@@ -263,40 +250,25 @@ class DocumentProcessor:
                 return ""
     
     def _extract_from_image(self, file) -> str:
-        """Extraction via vision IA (1min.ai) — aucun OCR local requis."""
+        """Extraction via API OpenAI vision — aucun OCR local requis."""
         import base64
-        import requests as _requests
 
         file_bytes = file.read()
-        file.seek(0)  # Réinitialiser le curseur pour un éventuel re-read ultérieur
+        file.seek(0)
 
+        # Déterminer le MIME type pour l'URL data
+        mime = file.type if file.type and file.type.startswith('image/') else 'image/png'
         b64_image = base64.b64encode(file_bytes).decode('utf-8')
 
         try:
-            url = f"{settings.MIN_AI_BASE_URL}/api/chat-with-ai"
-            headers = {
-                "Content-Type": "application/json",
-                "API-KEY": settings.MIN_AI_API_KEY,
-            }
-            payload = {
-                "type": "CHAT_WITH_AI",
-                "model": settings.MIN_AI_MODEL,
-                "promptObject": {
-                    "prompt": (
-                        "Transcris intégralement tout le texte et toutes les formules "
-                        "mathématiques de cette image. "
-                        "Garde la structure exacte de l'exercice : titres, numéros de questions, "
-                        "tableaux, formules (notation standard : f(x) = ...). "
-                        "Ne résous rien, transcris uniquement."
-                    ),
-                    "isMixed": True,
-                    "imageList": [b64_image],
-                    "webSearch": False,
-                },
-            }
-            response = _requests.post(url, headers=headers, json=payload, timeout=90)
-            response.raise_for_status()
-            text = _parse_vision_response(response.json())
+            prompt = (
+                "Transcris intégralement tout le texte et toutes les formules "
+                "mathématiques de cette image. "
+                "Garde la structure exacte de l'exercice : titres, numéros de questions, "
+                "tableaux, formules (notation standard : f(x) = ...). "
+                "Ne résous rien, transcris uniquement."
+            )
+            text = _call_vision(b64_image, prompt, mime=mime)
             if text:
                 return text
         except Exception as e:

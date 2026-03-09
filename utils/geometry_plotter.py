@@ -22,7 +22,7 @@ _FORBIDDEN_PAT = re.compile(
     re.IGNORECASE
 )
 _ALLOWED_NAMES_PAT = re.compile(
-    r'\b(sin|cos|tan|sinh|cosh|tanh|sqrt|cbrt|exp|log|log10|log2|abs|'
+    r'\b(sin|cos|tan|sinh|cosh|tanh|sqrt|cbrt|exp|ln|log|log10|log2|abs|'
     r'floor|ceil|sign|arcsin|arccos|arctan|arcsinh|arccosh|arctanh|'
     r'pi|np|x|e)\b'
 )
@@ -38,6 +38,17 @@ def _is_safe_formula(expr: str) -> bool:
     remaining = _ALLOWED_NAMES_PAT.sub('', expr)
     remaining = _ALLOWED_CHARS_PAT.sub('', remaining)
     return len(remaining.strip()) == 0
+
+
+def _is_compilable_formula(expr: str) -> bool:
+    """Vérifie qu'une expression est sûre ET syntaxiquement compilable."""
+    if not _is_safe_formula(expr):
+        return False
+    try:
+        _compile_safe_formula(expr)
+        return True
+    except (ValueError, SyntaxError):
+        return False
 
 
 # ── Compilation sécurisée via AST ──────────────────────────────────────────
@@ -172,6 +183,7 @@ def detect_figure_needed(text: str) -> Dict[str, any]:
     figure_types = {
         'triangle': ['triangle', 'isocèle', 'équilatéral', 'scalène'],
         'cercle': ['cercle', 'rond', 'disque', 'arc de cercle'],
+        'ellipse': ['ellipse', 'elliptique', 'ovale'],
         'rectangle': ['rectangle'],
         'repere': ['repère', 'repere', 'axes', 'plan cartésien',
                    'repère orthonormé', 'système de coordonnées'],
@@ -276,7 +288,7 @@ def extract_parameters(text: str, figure_type: str) -> dict:
         for match in re.finditer(pattern, text, re.IGNORECASE):
             raw = _clean_formula(match.group(1))
             py = _to_python_expr(raw)
-            if not py:
+            if not py or not _is_compilable_formula(py):
                 continue
             if first_func:
                 params['function'] = raw
@@ -302,7 +314,7 @@ def extract_parameters(text: str, figure_type: str) -> dict:
                 raw = _clean_formula(m.group(1).strip())
                 if len(raw) >= 2:
                     py = _to_python_expr(raw)
-                    if py:
+                    if py and _is_compilable_formula(py):
                         params['function'] = raw
                         params['function_py'] = py
                         params['function_name'] = 'f(x)'
@@ -354,6 +366,20 @@ def extract_parameters(text: str, figure_type: str) -> dict:
         m = re.search(r'\br\s*=\s*(\d+(?:[.,]\d+)?)', text)
     if m:
         params['radius'] = float(m.group(1).replace(',', '.'))
+
+    # ── Demi-axes ellipse (a, b) ─────────────────────────────────────────────
+    # "a = 3", "demi-grand axe 4", "b = 2", "demi-petit axe 2"
+    _num_p = r'(\d+(?:[.,]\d+)?)'
+    m_a = re.search(rf'(?:demi-?grand\s+axe|grand\s+axe|semi-?major)\s*[=:de]*\s*{_num_p}', text, re.IGNORECASE)
+    if not m_a:
+        m_a = re.search(rf'\ba\s*=\s*{_num_p}', text)
+    m_b = re.search(rf'(?:demi-?petit\s+axe|petit\s+axe|semi-?minor)\s*[=:de]*\s*{_num_p}', text, re.IGNORECASE)
+    if not m_b:
+        m_b = re.search(rf'\bb\s*=\s*{_num_p}', text)
+    if m_a:
+        params['ellipse_a'] = float(m_a.group(1).replace(',', '.'))
+    if m_b:
+        params['ellipse_b'] = float(m_b.group(1).replace(',', '.'))
 
     # ── Dimensions rectangle ─────────────────────────────────────────────────
     # "longueur 4", "largeur 3", "côté 5", "4 cm", "3 m"
@@ -786,6 +812,38 @@ def _create_circle(center=(0, 0), radius=2.0, label='O') -> go.Figure:
     return fig
 
 
+def _create_ellipse(a=3.0, b=2.0) -> go.Figure:
+    """Trace une ellipse d'équation x²/a² + y²/b² = 1."""
+    theta = np.linspace(0, 2 * np.pi, 400)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=a * np.cos(theta),
+        y=b * np.sin(theta),
+        mode='lines', line=dict(color='#FF6B35', width=2.5),
+        name=f'ellipse a={a}, b={b}',
+    ))
+    # Centre
+    fig.add_trace(go.Scatter(x=[0], y=[0], mode='markers+text',
+        marker=dict(size=8, color='#FF6B35'),
+        text=['O'], textposition='top right', textfont=dict(size=14)))
+    # Demi-grand axe
+    fig.add_annotation(x=a, y=0, text=f'a={a}', showarrow=True,
+                       ax=-40, ay=20, font=dict(size=13, color='#FF6B35'))
+    # Demi-petit axe
+    fig.add_annotation(x=0, y=b, text=f'b={b}', showarrow=True,
+                       ax=30, ay=-20, font=dict(size=13, color='#FF6B35'))
+    pad_x = a * 0.25 + 0.5
+    pad_y = b * 0.25 + 0.5
+    fig.update_layout(
+        **_base_layout(f'Ellipse — a={a}, b={b}  (x²/{a}² + y²/{b}² = 1)'),
+        xaxis=dict(**_axis_cfg(-a - pad_x, a + pad_x, 'x'), scaleanchor='y'),
+        yaxis=_axis_cfg(-b - pad_y, b + pad_y, 'y'),
+    )
+    fig.add_hline(y=0, line_color='black', line_width=1.2)
+    fig.add_vline(x=0, line_color='black', line_width=1.2)
+    return fig
+
+
 def _create_rectangle(w=4.0, h=3.0) -> go.Figure:
     xs = [0, w, w, 0, 0]
     ys = [0, 0, h, h, 0]
@@ -1004,6 +1062,11 @@ def auto_draw_figure(detection: dict):
         elif fig_type == 'cercle':
             radius = params.get('radius', 2.0)
             return _create_circle(radius=radius)
+
+        elif fig_type == 'ellipse':
+            a = params.get('ellipse_a', 3.0)
+            b = params.get('ellipse_b', 2.0)
+            return _create_ellipse(a=a, b=b)
 
         elif fig_type in ('rectangle', 'carre'):
             w = params.get('length', 4.0)

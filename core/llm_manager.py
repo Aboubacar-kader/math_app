@@ -149,8 +149,14 @@ class LLMManager:
             'comment ça va', 'comment ca va', 'ça va', 'ca va',
             'besoin d\'aide', 'aide-moi', 'aide moi',
         ]
+        import re as _re
         for keyword in conv_keywords:
-            if keyword in question_lower:
+            # Word-boundary pour les mots courts (≤4 chars) afin d'éviter les
+            # faux positifs : 'hi' dans 'graphique', 'bye' dans 'hybride', etc.
+            if len(keyword) <= 4:
+                if _re.search(rf'\b{_re.escape(keyword)}\b', question_lower):
+                    return "CONVERSATION", f"Conversationnel: '{keyword}'"
+            elif keyword in question_lower:
                 return "CONVERSATION", f"Conversationnel: '{keyword}'"
 
         if question_lower in {'ok', 'okay', "d'accord", 'dacord', 'compris',

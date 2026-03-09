@@ -557,8 +557,9 @@ propriétés et théorèmes ci-dessous. Cite-les explicitement dans ta réponse 
 - Copie le numéro/intitulé de chaque question EXACTEMENT comme il apparaît (1., 1.1., Partie A, etc.).
 
 ⚠️ RÈGLE N°2 — CALCULS :
-- Symboles directement dans le texte : × ÷ ⇒ → ≤ ≥ ≠ ≈ ∞ ± ∈ ℝ
-- JAMAIS : \\times, \\Rightarrow, \\mathbb{{R}}, \\begin{{...}}, \\boxed{{...}}
+- Symboles directement dans le texte : × ÷ ⇒ → ≤ ≥ ≠ ≈ ∞ ± ∈ ℝ ² ³ √ Δ
+- Exposants : x², x³, xⁿ — Fractions : (−b ± √Δ) / 2a — Indices : x₁, x₂
+- JAMAIS : \\times, \\Rightarrow, \\mathbb{{R}}, \\begin{{...}}, \\boxed{{...}}, $...$, $$...$$
 - Parenthèses OBLIGATOIRES autour de tout nombre négatif : f(−1) = 2 × (−1) − 3
 - Détaille chaque étape (× ÷ avant + −)
 
@@ -630,8 +631,9 @@ FORMAT OBLIGATOIRE (partie par partie, question par question) :
             cours_system = f"""Tu es IntelliMath, professeur de mathématiques de lycée.{(' ' + level_info) if level_info else ''}
 
 Le document fourni est le contexte de référence. Lis-le entièrement et réponds à la question à partir de ce document.
-- Utilise les symboles directement : × ÷ ⇒ → ≤ ≥ ≠ ≈ ∞ ± ∈ ℝ
-- JAMAIS les commandes LaTeX hors formule : \\times, \\Rightarrow, \\mathbb{{R}}...
+- Symboles directement dans le texte : × ÷ ⇒ → ≤ ≥ ≠ ≈ ∞ ± ∈ ℝ ² ³ √ Δ
+- Exposants : x², x³ — Fractions : (−b ± √Δ) / 2a — Indices : x₁, x₂
+- JAMAIS : \\times, \\Rightarrow, \\mathbb{{R}}, \\begin{{...}}, \\boxed{{...}}, $...$, $$...$$
 - Tableau de valeurs → tableau markdown (JAMAIS \\begin{{tabular}}){conv_part}"""
 
             cours_user = f"Question : {question}\n\nDocument :\n{doc_context}"
@@ -677,7 +679,7 @@ Le document fourni est le contexte de référence. Lis-le entièrement et répon
                 break
     else:
         st.session_state.pop(f'variation_table_{section_key}', None)
-    detection_text = ' '.join(filter(None, [
+    detection_text = '\n'.join(filter(None, [
         question,
         doc_context[:400] if doc_context else '',
         last_llm_response[:600],
