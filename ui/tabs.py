@@ -30,8 +30,9 @@ def clean_rag_response(response: str) -> str:
         return response
     
     # Pattern 1 : "Dans un document [filename] (Pertinence : XX%)"
+    # [^\]]{0,300} — pas de quantificateur avide sur données non maîtrisées (ReDoS)
     response = re.sub(
-        r'Dans un document \[.*?\]\s*\(Pertinence\s*:\s*\d+%\)',
+        r'Dans un document \[[^\]]{0,300}\]\s*\(Pertinence\s*:\s*\d+%\)',
         '',
         response,
         flags=re.IGNORECASE
@@ -87,10 +88,11 @@ def fix_latex_for_streamlit(text: str) -> str:
         return text
 
     # ── \begin{tabular}...\end{tabular} → tableau markdown ───────────────────
+    # ((?:[^\\]|\\(?!end))*) = tempered greedy token — linéaire, sans ReDoS
     text = re.sub(
-        r'\\begin\{(?:tabular|array)\}(.*?)\\end\{(?:tabular|array)\}',
+        r'\\begin\{(?:tabular|array)\}((?:[^\\]|\\(?!end))*)\\end\{(?:tabular|array)\}',
         lambda m: _tabular_to_markdown(m.group(1)),
-        text, flags=re.DOTALL
+        text
     )
 
     # ── \begin{align*}...\end{align*} → lignes $$ séparées ──────────────────
@@ -105,34 +107,35 @@ def fix_latex_for_streamlit(text: str) -> str:
         return '\n'.join(result)
 
     text = re.sub(
-        r'\\begin\{align\*?\}(.*?)\\end\{align\*?\}',
+        r'\\begin\{align\*?\}((?:[^\\]|\\(?!end))*)\\end\{align\*?\}',
         align_to_dollars,
-        text, flags=re.DOTALL
+        text
     )
 
     # ── \begin{equation}...\end{equation} → $$ ... $$ ───────────────────────
     text = re.sub(
-        r'\\begin\{equation\*?\}(.*?)\\end\{equation\*?\}',
+        r'\\begin\{equation\*?\}((?:[^\\]|\\(?!end))*)\\end\{equation\*?\}',
         lambda m: f'$${m.group(1).strip()}$$',
-        text, flags=re.DOTALL
+        text
     )
 
     # ── Autres environnements inconnus → supprimer les balises, garder le contenu
     text = re.sub(
-        r'\\begin\{[^}]+\}(.*?)\\end\{[^}]+\}',
+        r'\\begin\{[^}]{1,64}\}((?:[^\\]|\\(?!end))*)\\end\{[^}]{1,64}\}',
         lambda m: m.group(1).strip(),
-        text, flags=re.DOTALL
+        text
     )
 
     # ── \boxed{val} hors math → **val** ──────────────────────────────────────
-    text = re.sub(r'\\boxed\{([^}]*)\}', r'**\1**', text)
+    text = re.sub(r'\\boxed\{([^}]{0,500})\}', r'**\1**', text)
 
     # ── Commandes d'espacement non supportées ────────────────────────────────
-    text = re.sub(r'\\[hv]space\*?\{[^}]*\}', ' ', text)
+    text = re.sub(r'\\[hv]space\*?\{[^}]{0,100}\}', ' ', text)
     text = re.sub(r'\\(quad|qquad|,|;|!)\b', ' ', text)
 
     # ── Délimiter les commandes LaTeX non encadrées par $...$ ────────────────
-    MATH_SPLIT = re.compile(r'(\$\$[\s\S]*?\$\$|\$[^\$\n]+\$)')
+    # (?:[^$]|\$(?!\$))* = un seul $ OK dans $$…$$, mais pas $$ (délimiteur fin)
+    MATH_SPLIT = re.compile(r'(\$\$(?:[^$]|\$(?!\$))*\$\$|\$[^\$\n]{1,5000}\$)')
 
     # Commandes LaTeX hors $...$ → symboles Unicode lisibles
     _LATEX_UNICODE = [
@@ -168,11 +171,11 @@ def fix_latex_for_streamlit(text: str) -> str:
         for pattern, symbol in _LATEX_UNICODE:
             segment = re.sub(pattern, symbol, segment)
         # \frac{a}{b} → (a)/(b)
-        segment = re.sub(r'\\frac\{([^}]+)\}\{([^}]+)\}', r'(\1)/(\2)', segment)
+        segment = re.sub(r'\\frac\{([^}]{1,500})\}\{([^}]{1,500})\}', r'(\1)/(\2)', segment)
         # \sqrt{x} → √(x)
-        segment = re.sub(r'\\sqrt\{([^}]+)\}', r'√(\1)', segment)
+        segment = re.sub(r'\\sqrt\{([^}]{1,500})\}', r'√(\1)', segment)
         # \lim_{x→a} → lim
-        segment = re.sub(r'\\lim_\{([^}]+)\}', r'lim(\1)', segment)
+        segment = re.sub(r'\\lim_\{([^}]{1,200})\}', r'lim(\1)', segment)
         segment = re.sub(r'\\lim\b', 'lim', segment)
         return segment
 

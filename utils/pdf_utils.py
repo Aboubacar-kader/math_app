@@ -46,11 +46,13 @@ def clean_markdown_for_pdf(text: str) -> str:
     text = re.sub(r'\$[^$]+\$', '[formule]', text)
 
     # Supprimer les balises markdown complexes
-    text = re.sub(r'!\[.*?\]\(.*?\)', '', text)  # Images
-    text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', text)  # Liens → texte
+    # [^\]]{0,1000} et [^\)]{0,2000} — bornes pour éviter le ReDoS quadratique
+    text = re.sub(r'!\[[^\]]{0,1000}\]\([^\)]{0,2000}\)', '', text)   # Images
+    text = re.sub(r'\[([^\]]{1,1000})\]\([^\)]{1,2000}\)', r'\1', text)  # Liens → texte
 
     # Titres markdown → texte simple
-    text = re.sub(r'^#{1,6}\s+(.+)$', r'\n\1\n', text, flags=re.MULTILINE)
+    # [^\n]{1,2000} évite le backtracking polynomial sur .+
+    text = re.sub(r'^#{1,6}\s+([^\n]{1,2000})$', r'\n\1\n', text, flags=re.MULTILINE)
 
     # Emphases
     text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)  # Gras

@@ -23,7 +23,8 @@ def clean_rag_response(response: str) -> str:
     if not response:
         return response
     
-    response = re.sub(r'Dans un document \[.*?\]\s*\(Pertinence\s*:\s*\d+%\)', '', response, flags=re.IGNORECASE)
+    # [^\]]{0,300} — borne pour éviter le ReDoS quadratique sur .*?
+    response = re.sub(r'Dans un document \[[^\]]{0,300}\]\s*\(Pertinence\s*:\s*\d+%\)', '', response, flags=re.IGNORECASE)
     response = re.sub(r'\[[\w\-_\.]+\.pdf\]', '', response)
     response = re.sub(r'\(Pertinence\s*:\s*\d+%\)', '', response)
     response = re.sub(r'\n\s*\n\s*\n+', '\n\n', response)
