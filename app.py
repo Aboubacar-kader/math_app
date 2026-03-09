@@ -254,19 +254,48 @@ def render_chat_messages():
 
 
 def first_page_render():
-    """Footer avec branding Kaydan - HTML corrigé"""
-    
-    # IntelliMath
-    st.markdown(
-        "<h3 style='text-align:center; font-size:17px; color:#111111; margin:0;'>🧮 <span style='color:#FF6B35; font-size:17px'>Intelli</span>Math</h3>",
-        unsafe_allow_html=True
-    )
-    
-    # Sous-titre
-    st.markdown(
-        "<p style='text-align:center; color:#111111; font-size:17px; margin:8px 0;'>Apprends tes cours · Résous tes exercices</p>",
-        unsafe_allow_html=True
-    )
+    """Hero header — IntelliMath design moderne"""
+
+    st.markdown("""
+    <div style="
+        text-align: center;
+        padding: 28px 24px 20px;
+        margin-bottom: 4px;
+    ">
+        <div style="
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        ">
+            <span style="
+                font-size: 36px;
+                line-height: 1;
+            ">🧮</span>
+            <h1 style="
+                margin: 0;
+                font-family: 'Inter', sans-serif;
+                font-size: 34px;
+                font-weight: 800;
+                letter-spacing: -0.04em;
+                color: #0F172A;
+            "><span style="
+                background: linear-gradient(135deg, #FF8C00 0%, #FF6B2B 55%, #E55A1C 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            ">Intelli</span>Math</h1>
+        </div>
+        <p style="
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            color: #64748B;
+            font-weight: 400;
+            letter-spacing: 0.01em;
+        ">Apprends tes cours &nbsp;·&nbsp; Résous tes exercices &nbsp;·&nbsp; Seconde → Terminale</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 def render_chat_input():

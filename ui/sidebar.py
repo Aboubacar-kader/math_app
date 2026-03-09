@@ -39,28 +39,47 @@ def render_sidebar():
 
 
 def render_footer():
-    """Footer avec branding Kaydan - HTML corrigé"""
-    
-    # Version simple sans HTML complexe
-    st.markdown("---")
-    
-    # IntelliMath
-    st.markdown(
-        "<h3 style='text-align:center; font-size:17px; color:#111111; margin:0;'>🧮 <span style='color:white; font-size:17px'>Intelli</span>Math</h3>",
-        unsafe_allow_html=True
-    )
-    
-    # Sous-titre
-    st.markdown(
-        "<p style='text-align:center; color:#111111; font-size:17px; margin:8px 0;'>Lycée : Seconde → Terminale</p>",
-        unsafe_allow_html=True
-    )
-    
-    # Badge Kaydan
-    st.markdown(
-        "<div style='text-align:center; margin:12px 0;'><span style='background:white; color:#FF4500; padding:4px 12px; border-radius:12px; font-size:15px; font-weight:700; letter-spacing:0.5px;'>POWERED BY KAYDAN TECHNOLOGY</span></div>",
-        unsafe_allow_html=True 
-    )
+    """Footer branding Kaydan — design moderne dark sidebar"""
+
+    st.markdown("""
+    <div style="
+        margin-top: 24px;
+        padding: 16px 12px 12px;
+        border-top: 1px solid rgba(255,255,255,0.07);
+    ">
+        <div style="
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        ">
+            <span style="font-size: 18px; line-height:1;">🧮</span>
+            <span style="
+                font-family: 'Inter', sans-serif;
+                font-size: 16px;
+                font-weight: 800;
+                letter-spacing: -0.03em;
+                color: rgba(255,255,255,0.90);
+            "><span style="
+                background: linear-gradient(135deg, #FF8C00, #FF6B2B);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            ">Intelli</span>Math</span>
+        </div>
+        <p style="
+            text-align: center;
+            font-family: 'Inter', sans-serif;
+            font-size: 10.5px;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.30);
+            margin: 0;
+        ">Kaydan Technology</p>
+    </div>
+    """, unsafe_allow_html=True)
     
 
 

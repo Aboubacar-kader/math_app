@@ -44,7 +44,7 @@ def _is_safe_formula(expr: str) -> bool:
 _SAFE_AST_NODES = frozenset({
     _ast.Expression, _ast.BinOp, _ast.UnaryOp, _ast.Call,
     _ast.Constant, _ast.Name, _ast.Load,
-    _ast.Add, _ast.Sub, _ast.Mul, _ast.Div, _ast.Pow, _ast.Mod, _ast.FloorDiv,
+    _ast.Add, _ast.Sub, _ast.Mult, _ast.Div, _ast.Pow, _ast.Mod, _ast.FloorDiv,
     _ast.UAdd, _ast.USub,
 })
 _SAFE_FUNC_NAMES = frozenset({
