@@ -4,7 +4,7 @@ Utilisé pour visualiser l'étude des fonctions.
 """
 
 import re
-import random
+import uuid
 from typing import List, Optional, Dict
 
 
@@ -160,7 +160,7 @@ def render_variation_table(
     fy = [_fy(i) for i in range(n)]
 
     # ── Construction SVG ───────────────────────────────────────
-    uid   = random.randint(10000, 99999)
+    uid   = uuid.uuid4().hex[:8]
     parts = []
 
     parts.append(f'''<div style="overflow-x:auto;">

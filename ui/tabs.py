@@ -4,6 +4,7 @@ Le LLM analyse chaque question et décide de la meilleure action
 Les références aux documents sont automatiquement supprimées
 """
 
+import html as _html
 import streamlit as st
 import streamlit.components.v1 as st_components
 from datetime import datetime
@@ -1834,22 +1835,22 @@ def render_formula_card(formule_data: dict, level: str):
     st.markdown(
         f'<div style="background:white;border:2px solid #E8E8E8;border-radius:16px;padding:20px;margin-bottom:20px;">'
         f'<div style="display:flex;justify-content:space-between;margin-bottom:10px;">'
-        f'<span style="color:#FF6B35;font-weight:700;">{titre}</span>'
-        f'<span style="background:#FF6B35;color:white;padding:4px 8px;border-radius:10px;font-size:10px;">{level}</span>'
+        f'<span style="color:#FF6B35;font-weight:700;">{_html.escape(titre)}</span>'
+        f'<span style="background:#FF6B35;color:white;padding:4px 8px;border-radius:10px;font-size:10px;">{_html.escape(level)}</span>'
         f'</div>'
         f'<div style="background:#F8F9FA;padding:12px;border-left:4px solid #FF6B35;margin:10px 0;">'
-        f'<pre style="margin:0;font-family:monospace;font-size:13px;">{formule}</pre>'
+        f'<pre style="margin:0;font-family:monospace;font-size:13px;">{_html.escape(formule)}</pre>'
         f'</div>',
         unsafe_allow_html=True
     )
-    
+
     # Légende en composant natif Streamlit
     if legende:
         st.info(f"📝 {legende}")
-    
+
     # Description
     st.markdown(
-        f'<div style="color:#6C757D;font-size:12px;font-style:italic;">{description}</div>'
+        f'<div style="color:#6C757D;font-size:12px;font-style:italic;">{_html.escape(description)}</div>'
         f'</div>',
         unsafe_allow_html=True
     )
@@ -2988,32 +2989,32 @@ def render_theorem_card(theorem_data: dict, level: str):
     
     html = f'''<div class="{card_class}">
     <div class="theorem-header">
-        <span class="theorem-title">{titre}</span>
+        <span class="theorem-title">{_html.escape(titre)}</span>
         <div class="badges">
-            <span class="{badge_class}">{type_item}</span>
-            <span class="level-badge-small">{level}</span>
+            <span class="{badge_class}">{_html.escape(type_item)}</span>
+            <span class="level-badge-small">{_html.escape(level)}</span>
         </div>
     </div>
-    <div class="theorem-enonce">{enonce}</div>'''
-    
+    <div class="theorem-enonce">{_html.escape(enonce)}</div>'''
+
     if hypothese and conclusion:
         html += f'''
     <div class="theorem-statement">
         <div class="hypothesis">
             <span class="statement-label">📌 Hypothèse :</span>
-            <span class="statement-text">{hypothese}</span>
+            <span class="statement-text">{_html.escape(hypothese)}</span>
         </div>
         <div class="conclusion">
             <span class="statement-label">✅ Conclusion :</span>
-            <span class="statement-text">{conclusion}</span>
+            <span class="statement-text">{_html.escape(conclusion)}</span>
         </div>
     </div>'''
-    
+
     if legende:
         html += f'''
     <div class="theorem-legend">
         <span class="legend-icon">💡</span>
-        {legende}
+        {_html.escape(legende)}
     </div>'''
     
     html += '\n</div>'
@@ -3048,7 +3049,7 @@ def render_theoremes():
     if selected == "Tous":
         for chapitre_name, items in THEOREMES_PROPRIETES[level].items():
             st.markdown(
-                f'<div class="theorem-category-header">{chapitre_name}</div>',
+                f'<div class="theorem-category-header">{_html.escape(chapitre_name)}</div>',
                 unsafe_allow_html=True
             )
             
@@ -3059,7 +3060,7 @@ def render_theoremes():
     else:
         items = THEOREMES_PROPRIETES[level][selected]
         st.markdown(
-            f'<div class="theorem-category-header">{selected}</div>',
+            f'<div class="theorem-category-header">{_html.escape(selected)}</div>',
             unsafe_allow_html=True
         )
         
@@ -3195,7 +3196,7 @@ def render_reference_rapide():
     # Affichage des formules
     if selected == "Toutes":
         for cat_name, formules in FORMULES_REFERENCE[level].items():
-            st.markdown(f'<div class="category-header">{cat_name}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="category-header">{_html.escape(cat_name)}</div>', unsafe_allow_html=True)
             
             cols = st.columns(3)
             for i, formule in enumerate(formules):
@@ -3203,7 +3204,7 @@ def render_reference_rapide():
                     render_formula_card(formule, level)
     else:
         formules = FORMULES_REFERENCE[level][selected]
-        st.markdown(f'<div class="category-header">{selected}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="category-header">{_html.escape(selected)}</div>', unsafe_allow_html=True)
         
         cols = st.columns(3)
         for i, formule in enumerate(formules):

@@ -3,6 +3,7 @@ Module de tracé de figures géométriques
 Détection automatique + Tracé interactif
 """
 
+import ast as _ast
 import streamlit as st
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -36,6 +37,41 @@ def _is_safe_formula(expr: str) -> bool:
     remaining = _ALLOWED_NAMES_PAT.sub('', expr)
     remaining = _ALLOWED_CHARS_PAT.sub('', remaining)
     return len(remaining.strip()) == 0
+
+
+# ── Compilation sécurisée via AST ──────────────────────────────────────────
+
+_SAFE_AST_NODES = frozenset({
+    _ast.Expression, _ast.BinOp, _ast.UnaryOp, _ast.Call,
+    _ast.Constant, _ast.Name, _ast.Load,
+    _ast.Add, _ast.Sub, _ast.Mul, _ast.Div, _ast.Pow, _ast.Mod, _ast.FloorDiv,
+    _ast.UAdd, _ast.USub,
+})
+_SAFE_FUNC_NAMES = frozenset({
+    'sin', 'cos', 'tan', 'sqrt', 'exp', 'log', 'abs',
+    'floor', 'ceil', 'arcsin', 'arccos', 'arctan',
+})
+_SAFE_VAR_NAMES = frozenset({'x', 'pi', 'e', 'np'})
+
+
+def _compile_safe_formula(expr: str):
+    """
+    Parse et compile une expression mathématique via AST Python.
+    Valide que seuls des nœuds et identifiants autorisés sont présents.
+    Retourne un objet code prêt pour eval() — la chaîne brute n'est jamais
+    passée directement à eval().
+    Lève ValueError si une construction non autorisée est détectée.
+    """
+    tree = _ast.parse(expr, mode='eval')
+    for node in _ast.walk(tree):
+        if type(node) not in _SAFE_AST_NODES:
+            raise ValueError(f"Nœud AST non autorisé : {type(node).__name__}")
+        if isinstance(node, _ast.Name) and node.id not in (_SAFE_FUNC_NAMES | _SAFE_VAR_NAMES):
+            raise ValueError(f"Identifiant non autorisé : {node.id!r}")
+        if isinstance(node, _ast.Call):
+            if not isinstance(node.func, _ast.Name) or node.func.id not in _SAFE_FUNC_NAMES:
+                raise ValueError("Appel de fonction non autorisé")
+    return compile(tree, '<math_expr>', 'eval')
 
 
 # ============================================================
@@ -370,11 +406,12 @@ class GeometryPlotter:
                 st.warning(f"⚠️ Expression non autorisée : {func_str}")
                 return self.fig
 
-            # Évaluer la fonction
+            # Évaluer la fonction via AST compilé (espace de noms restreint)
             ns = {'x': x, 'np': np, 'sin': np.sin, 'cos': np.cos,
                   'tan': np.tan, 'sqrt': np.sqrt, 'exp': np.exp,
-                  'log': np.log, '__builtins__': {}}
-            y = eval(func_str, ns)  # noqa: S307
+                  'log': np.log, 'pi': np.pi, 'e': np.e, '__builtins__': None}
+            code = _compile_safe_formula(func_str)
+            y = eval(code, ns)  # noqa: S307 — AST validé, espace de noms restreint
             
             self.ax.plot(x, y, color='#FF6B35', linewidth=2, label=f'f(x) = {func_str}')
             self.ax.axhline(y=0, color='k', linewidth=0.5)
@@ -486,9 +523,10 @@ def _eval_func(func_str: str, x: np.ndarray) -> Optional[np.ndarray]:
           'sqrt': np.sqrt, 'exp': np.exp, 'log': np.log,
           'floor': np.floor, 'ceil': np.ceil, 'abs': np.abs,
           'arcsin': np.arcsin, 'arccos': np.arccos, 'arctan': np.arctan,
-          '__builtins__': {}}
+          'pi': np.pi, 'e': np.e, '__builtins__': None}
     try:
-        result = eval(func_str, ns)  # noqa: S307
+        code = _compile_safe_formula(func_str)
+        result = eval(code, ns)  # noqa: S307 — AST validé, espace de noms restreint
         return np.where(np.isfinite(result), result, np.nan)
     except Exception:
         return None
