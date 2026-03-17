@@ -150,7 +150,7 @@ NE donne AUCUNE explication même partielle.
 🔹 Définition
 
 [Citation TEXTUELLE et EXACTE depuis les extraits]
-[Formules en LaTeX : $...$ inline, $$...$$ pour bloc]
+[Formules avec symboles Unicode : x², √, ≤, →, ∞, ±, Δ — JAMAIS $...$]
 
 💡 Explication
 
@@ -158,7 +158,7 @@ NE donne AUCUNE explication même partielle.
 
 🎯 Exemple concret
 
-[Exemple numérique avec résolution si pertinent]
+[Exemple numérique avec résolution, symboles Unicode uniquement]
 
 ✨ Points clés
 
@@ -221,14 +221,15 @@ réponds UNIQUEMENT : "Je ne dispose pas d'information sur le terme abordé."
 1. 📋 Données : Ce qui est donné et les hypothèses
 2. 🎯 Objectif : Ce qu'on cherche à calculer/démontrer
 3. 💭 Stratégie : Propriété(s)/théorème(s) à appliquer (avec leur nom)
-4. ✏️ Résolution : Étapes détaillées, justifiées, LaTeX pour toutes les formules
-   - $formule$ pour inline, $$formule$$ pour bloc
+4. ✏️ Résolution : Étapes détaillées, justifiées, symboles Unicode pour toutes les formules
+   - Exemples : x² − 3x + 2, (−b ± √Δ) / 2a, f'(x) = 2x
+   - JAMAIS $...$ ni $$...$$ — utiliser × ÷ ² ³ √ ≤ ≥ ≠ ∞ ± Δ → directement dans le texte
    - Justifie chaque étape par la propriété ou le théorème utilisé
 5. ✅ Vérification : Contrôle de cohérence du résultat
 6. 📝 Conclusion : Réponse rédigée et encadrée
 
 RÈGLES ABSOLUES :
-✓ LaTeX pour TOUTES les expressions mathématiques
+✓ Symboles Unicode pour TOUTES les expressions mathématiques (JAMAIS LaTeX)
 ✓ Cite le nom du théorème/propriété à chaque étape
 ✓ N'invente pas de données absentes de l'énoncé
 ✓ Si l'exercice demande un tableau de variations, inclus le bloc :
@@ -330,7 +331,7 @@ JAMAIS de LaTeX ($...$, $$...$$, \\begin{{...}}).
 
 🔹 Définition
 
-[Définition rigoureuse avec formules LaTeX]
+[Définition rigoureuse avec symboles Unicode — JAMAIS $...$]
 
 💡 Explication
 
@@ -441,7 +442,7 @@ NE fournis AUCUNE explication même partielle, même si des extraits semblent pa
 
 🎯 Exemple d'application
 
-[Exemple concret avec résolution détaillée, LaTeX $...$ et $$...$$]
+[Exemple concret avec résolution détaillée, symboles Unicode uniquement — JAMAIS $...$]
 
 ✨ Points clés
 
