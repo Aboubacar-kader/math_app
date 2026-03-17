@@ -293,13 +293,5 @@ class DocumentProcessor:
         except Exception:
             st.warning("Sauvegarde du fichier échouée.")
     
-    def get_file_stats(self) -> Dict[str, int]:
-        """Retourne les statistiques des fichiers uploadés"""
-        files = list(self.upload_dir.glob('*'))
-        return {
-            'total_files': len(files),
-            'total_size_mb': sum(f.stat().st_size for f in files) / (1024 * 1024)
-        }
-
 # Instance globale
 document_processor = DocumentProcessor()

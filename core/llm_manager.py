@@ -93,22 +93,8 @@ class LLMManager:
             )
         return self._embeddings
 
-    def generate_response(self, prompt: str) -> str:
-        try:
-            return call_1minai("", prompt)
-        except Exception as e:
-            return f"❌ Erreur lors de la génération : {str(e)}"
-
-    def stream_response(self, prompt: str):
-        """Simule le streaming en retournant la réponse complète en un chunk."""
-        try:
-            result = call_1minai("", prompt)
-            yield result
-        except Exception as e:
-            yield f"❌ Erreur : {str(e)}"
-
     # ============================================================
-    # CLASSIFICATION INTELLIGENTE DES REQUÊTES (inchangée)
+    # CLASSIFICATION INTELLIGENTE DES REQUÊTES
     # ============================================================
 
     def classify_query(self, question: str) -> Tuple[str, str]:
@@ -167,39 +153,7 @@ class LLMManager:
         return "MATH_RAG", "Défaut"
 
     # ============================================================
-    # CLASSIFICATION DE L'INTENTION MATHÉMATIQUE (inchangée)
-    # ============================================================
-
-    def classify_math_intent(self, question: str, rag_function_type: str = "query") -> str:
-        if rag_function_type == "exercise":
-            return "EXERCICE"
-
-        question_lower = question.lower()
-
-        exercice_keywords = [
-            'résous', 'resous', 'résoudre', 'resoudre',
-            'calcule', 'calculer',
-            'démontre', 'demontre', 'démontrer',
-            'prouve', 'prouver',
-            'trouve', 'trouver',
-            'détermine', 'determiner', 'déterminer',
-            'exercice', 'problème', 'probleme',
-            'corrige', 'corriger', 'correction',
-            'vérifie', 'verifier',
-            'applique', 'appliquer',
-            'simplifie', 'simplifier',
-            'factorise', 'factoriser',
-            'développe', 'developpe',
-        ]
-
-        for kw in exercice_keywords:
-            if kw in question_lower:
-                return "EXERCICE"
-
-        return "COURS"
-
-    # ============================================================
-    # RÉPONSES CONVERSATIONNELLES (inchangées)
+    # RÉPONSES CONVERSATIONNELLES
     # ============================================================
 
     def get_conversation_response(self, question: str) -> str:

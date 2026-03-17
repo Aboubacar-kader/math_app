@@ -4,7 +4,7 @@ Fournit des fonctions utilitaires pour parser et analyser les questions.
 """
 
 import re
-from typing import Dict, List, Tuple, Optional
+from typing import Tuple, Optional
 from enum import Enum
 
 class MathTopic(Enum):
@@ -96,35 +96,6 @@ class MathSolver:
         else:
             return MathLevel.SECONDE  # Par défaut
     
-    def extract_equations(self, text: str) -> List[str]:
-        """
-        Extrait les équations mathématiques du texte.
-        
-        Args:
-            text: Le texte contenant des équations
-            
-        Returns:
-            Liste des équations trouvées
-        """
-        equations = []
-        
-        # Chercher les expressions LaTeX
-        latex_patterns = [
-            r'\$\$([^$]+)\$\$',  # Block
-            r'\$([^$]+)\$',       # Inline
-        ]
-        
-        for pattern in latex_patterns:
-            matches = re.findall(pattern, text)
-            equations.extend(matches)
-        
-        # Chercher les expressions simples (x=..., y=..., etc.)
-        simple_pattern = r'[a-zA-Z]\s*=\s*[^,.\n]+'
-        simple_matches = re.findall(simple_pattern, text)
-        equations.extend(simple_matches)
-        
-        return list(set(equations))  # Éliminer les doublons
-    
     def is_exercise(self, text: str) -> bool:
         """
         Détermine si le texte est un exercice à résoudre.
@@ -167,39 +138,5 @@ class MathSolver:
         
         return False, None
     
-    def format_mathematical_response(
-        self, 
-        question: str, 
-        solution: str,
-        topic: Optional[MathTopic] = None
-    ) -> str:
-        """
-        Formate une réponse mathématique avec structure.
-        
-        Args:
-            question: La question posée
-            solution: La solution générée
-            topic: Le sujet (optionnel)
-            
-        Returns:
-            Réponse formatée
-        """
-        if topic:
-            header = f"### 📐 {topic.value.capitalize()}\n\n"
-        else:
-            header = ""
-        
-        formatted = f"""{header}**Question :** {question}
-
----
-
-{solution}
-
----
-
-💡 *N'hésite pas à demander des précisions !*
-"""
-        return formatted
-
 # Instance globale
 math_solver = MathSolver()

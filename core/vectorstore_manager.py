@@ -243,42 +243,11 @@ class VectorStoreManager:
             collection_info = self.client.get_collection(self.collection_name)
             return collection_info.points_count
     
-    def clear_user_uploads(self):
-        """
-        Supprime UNIQUEMENT les documents uploadés par l'utilisateur
-        Garde la knowledge base intacte
-        """
-        # Qdrant ne permet pas de delete par filtre facilement
-        # On doit d'abord récupérer les IDs puis les supprimer
-        # Pour simplifier, on peut implémenter ça plus tard si nécessaire
-        pass
-    
     def clear_collection(self):
         """Vide complètement la collection (knowledge_base + user_uploads)"""
         self.client.delete_collection(self.collection_name)
         self._ensure_collection_exists()
     
-    # ════════════════════════════════════════════════════════
-    # STATISTIQUES
-    # ════════════════════════════════════════════════════════
-    
-    def get_statistics(self) -> Dict[str, Any]:
-        """
-        Retourne des statistiques sur la base vectorielle
-        
-        Returns:
-            Dict avec total, knowledge_base, user_uploads
-        """
-        total = self.count_documents()
-        
-        # Pour compter par type, on devrait faire une vraie requête
-        # Pour l'instant, on retourne juste le total
-        return {
-            "total": total,
-            "knowledge_base": None,  # Nécessite requête filtrée
-            "user_uploads": None     # Nécessite requête filtrée
-        }
-
 
 # ════════════════════════════════════════════════════════
 # INSTANCE GLOBALE
