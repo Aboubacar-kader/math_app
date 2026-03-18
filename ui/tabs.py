@@ -129,6 +129,14 @@ def fix_latex_for_streamlit(text: str) -> str:
     # ── \boxed{val} hors math → **val** ──────────────────────────────────────
     text = re.sub(r'\\boxed\{([^}]{0,500})\}', r'**\1**', text)
 
+    # ── \( ... \) (inline math LaTeX) → garder le contenu brut ───────────────
+    text = re.sub(r'\\\((.{1,2000}?)\\\)', r'\1', text)
+    # ── \[ ... \] (display math LaTeX) → $$ ... $$ ───────────────────────────
+    text = re.sub(r'\\\[(.{1,2000}?)\\\]', lambda m: f'$${m.group(1).strip()}$$', text)
+    # ── [ formule ] (LLM utilise crochets espacés comme délimiteur math) ──────
+    # Ne matche que [ contenu ] avec espace interne (jamais [lien](url) markdown)
+    text = re.sub(r'\[\s([^\[\]\n]{1,500})\s\]', r'\1', text)
+
     # ── Commandes d'espacement non supportées ────────────────────────────────
     text = re.sub(r'\\[hv]space\*?\{[^}]{0,100}\}', ' ', text)
     text = re.sub(r'\\(quad|qquad|,|;|!)\b', ' ', text)
@@ -139,6 +147,15 @@ def fix_latex_for_streamlit(text: str) -> str:
 
     # Commandes LaTeX hors $...$ → symboles Unicode lisibles
     _LATEX_UNICODE = [
+        # Délimiteurs \left / \right (supprimer le mot-clé, garder le symbole)
+        (r'\\left\(',         '('),
+        (r'\\right\)',        ')'),
+        (r'\\left\[',         '['),
+        (r'\\right\]',        ']'),
+        (r'\\left\\{',        '{'),
+        (r'\\right\\}',       '}'),
+        (r'\\left\.',         ''),
+        (r'\\right\.',        ''),
         # Opérateurs
         (r'\\times',          '×'),
         (r'\\cdot',           '·'),
@@ -246,6 +263,8 @@ def fix_latex_for_streamlit(text: str) -> str:
                 return _sub_map[inner]
             return f'_({inner})'
         segment = re.sub(r'_\{([^}]{1,20})\}', _replace_sub, segment)
+        # _n sans accolades (ex: \int_0^2, u_n) → indice Unicode
+        segment = re.sub(r'_([0-9])(?!\{)', lambda m: _sub_map.get(m.group(1), f'_{m.group(1)}'), segment)
         return segment
 
     parts = MATH_SPLIT.split(text)

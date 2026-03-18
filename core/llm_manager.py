@@ -4,11 +4,21 @@ Utilise l'API OpenAI (chat/completions) pour les réponses.
 Utilise HuggingFace sentence-transformers pour les embeddings (local, gratuit).
 """
 
+import os
 import requests
 from langchain_huggingface import HuggingFaceEmbeddings
 from typing import Optional, Tuple
 from config.settings import settings
 from utils.logger import get_logger
+
+# Supprimer les avertissements HuggingFace avant le chargement du modèle
+os.environ.setdefault("HF_HUB_DISABLE_IMPLICIT_TOKEN", "1")
+os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
+try:
+    from transformers import logging as _tf_logging
+    _tf_logging.set_verbosity_error()
+except Exception:
+    pass
 
 logger = get_logger(__name__)
 
@@ -96,6 +106,32 @@ class LLMManager:
     # ============================================================
     # CLASSIFICATION INTELLIGENTE DES REQUÊTES
     # ============================================================
+
+    def classify_math_intent(self, question: str, rag_function_type: str = "query") -> str:
+        """Détermine si la question est un EXERCICE ou un COURS."""
+        if rag_function_type == "exercise":
+            return "EXERCICE"
+
+        question_lower = question.lower()
+        exercice_keywords = [
+            'résous', 'resous', 'résoudre', 'resoudre',
+            'calcule', 'calculer',
+            'démontre', 'demontre', 'démontrer',
+            'prouve', 'prouver',
+            'trouve', 'trouver',
+            'détermine', 'determiner', 'déterminer',
+            'exercice', 'problème', 'probleme',
+            'corrige', 'corriger', 'correction',
+            'vérifie', 'verifier',
+            'applique', 'appliquer',
+            'simplifie', 'simplifier',
+            'factorise', 'factoriser',
+            'développe', 'developpe',
+        ]
+        for kw in exercice_keywords:
+            if kw in question_lower:
+                return "EXERCICE"
+        return "COURS"
 
     def classify_query(self, question: str) -> Tuple[str, str]:
         """
