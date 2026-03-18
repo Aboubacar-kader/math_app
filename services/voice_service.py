@@ -354,7 +354,8 @@ class VoiceService:
         text = re.sub(r'\b([a-zA-Z])\(([a-zA-Z])\)', r'\1 de \2', text)
 
         # Fractions écrites a/b → a sur b (contexte math : entourées de lettres/chiffres)
-        text = re.sub(r'([A-Za-z0-9]+)/([A-Za-z0-9]+)', r'\1 sur \2', text)
+        # Borne {1,50} pour éviter le backtracking catastrophique (ReDoS)
+        text = re.sub(r'([A-Za-z0-9]{1,50})/([A-Za-z0-9]{1,50})', r'\1 sur \2', text)
 
         # Séquences de lettres majuscules (noms de points/segments) : ABC → A B C
         def _space_caps(m):
