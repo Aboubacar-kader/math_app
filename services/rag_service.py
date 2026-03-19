@@ -141,7 +141,9 @@ NE donne AUCUNE explication même partielle.
 4. Si NON → réponds UNIQUEMENT : "Je ne dispose pas d'information sur le terme abordé."
 5. Si OUI → utilise le format ci-dessous avec une CITATION EXACTE.
 6. N'INVENTE PAS de définition absente des extraits.
-7. FORMULES : symboles Unicode directement dans le texte — JAMAIS de LaTeX ($...$, $$...$$).
+7. FORMULES : utilise $...$ pour les formules — ex: $\\frac{{a}}{{b}}$, $\\lim_{{x \\to a}}$, $x^2+3x$.
+   Symboles simples dans la prose : × ÷ ≤ ≥ ∞ ± ∈ ℝ → ⇒ (sans $)
+   JAMAIS $$...$$, \\begin{{...}}, \\boxed{{...}}.
 
 📝 FORMAT OBLIGATOIRE (si l'information est disponible) :
 
@@ -150,7 +152,7 @@ NE donne AUCUNE explication même partielle.
 🔹 Définition
 
 [Citation TEXTUELLE et EXACTE depuis les extraits]
-[Formules avec symboles Unicode : x², √, ≤, →, ∞, ±, Δ — JAMAIS $...$]
+[Formules entre $...$ — ex: $\\frac{{a}}{{b}}$, $\\sqrt{{x}}$, $\\lim_{{x \\to a}}$]
 
 💡 Explication
 
@@ -158,7 +160,7 @@ NE donne AUCUNE explication même partielle.
 
 🎯 Exemple concret
 
-[Exemple numérique avec résolution, symboles Unicode uniquement]
+[Exemple numérique avec résolution — formules entre $...$]
 
 ✨ Points clés
 
@@ -221,15 +223,16 @@ réponds UNIQUEMENT : "Je ne dispose pas d'information sur le terme abordé."
 1. 📋 Données : Ce qui est donné et les hypothèses
 2. 🎯 Objectif : Ce qu'on cherche à calculer/démontrer
 3. 💭 Stratégie : Propriété(s)/théorème(s) à appliquer (avec leur nom)
-4. ✏️ Résolution : Étapes détaillées, justifiées, symboles Unicode pour toutes les formules
-   - Exemples : x² − 3x + 2, (−b ± √Δ) / 2a, f'(x) = 2x
-   - JAMAIS $...$ ni $$...$$ — utiliser × ÷ ² ³ √ ≤ ≥ ≠ ∞ ± Δ → directement dans le texte
+4. ✏️ Résolution : Étapes détaillées, justifiées — formules entre $...$
+   - Exemples : $\\frac{{-b \\pm \\sqrt{{\\Delta}}}}{{2a}}$, $f'(x) = 2x$, $\\lim_{{x \\to +\\infty}}$
+   - Symboles simples dans la prose : × ÷ ≤ ≥ ∞ ± → ⇒ (sans $)
+   - JAMAIS $$...$$, \\begin{...}, \\boxed{...}
    - Justifie chaque étape par la propriété ou le théorème utilisé
 5. ✅ Vérification : Contrôle de cohérence du résultat
 6. 📝 Conclusion : Réponse rédigée et encadrée
 
 RÈGLES ABSOLUES :
-✓ Symboles Unicode pour TOUTES les expressions mathématiques (JAMAIS LaTeX)
+✓ Formules mathématiques entre $...$ — JAMAIS $$...$$, \\begin{...}, \\boxed{...}
 ✓ Cite le nom du théorème/propriété à chaque étape
 ✓ N'invente pas de données absentes de l'énoncé
 ✓ Si l'exercice demande un tableau de variations, inclus le bloc :
@@ -412,11 +415,11 @@ NE fournis AUCUNE explication même partielle, même si des extraits semblent pa
    ✗ N'INVENTE PAS de formules, énoncés ou propriétés absents des extraits
    ✗ Ne fais PAS de réponse approximative si tu n'es pas sûr à 100%
    ✗ N'utilise JAMAIS \\begin{align}, \\begin{equation}, \\hspace ni aucun environnement LaTeX
-   ✗ N'utilise JAMAIS $...$ ni $$...$$ — pas de LaTeX
+   ✗ N'utilise JAMAIS $$...$$ (display math) — uniquement $...$ pour l'inline
 
 4. FORMULES :
-   ✓ Symboles directement dans le texte : × ÷ ⇒ → ≤ ≥ ≠ ≈ ∞ ± ∈ ℝ ² ³ √ Δ
-   ✓ Exemples : f'(x) = 2x, f(x) = x² − 3x + 2, x = (−b ± √Δ) / 2a, uₙ = 2ⁿ
+   ✓ Formules mathématiques entre $...$ — ex: $\\frac{{a}}{{b}}$, $x^2-3x+2$, $\\lim_{{x \\to a}}$, $\\int_a^b f\\,dx$
+   ✓ Symboles simples dans la prose sans $ : × ÷ ⇒ → ≤ ≥ ≠ ≈ ∞ ± ∈ ℝ ² ³ √ Δ
 
 5. TABLEAU DE VARIATIONS :
    Si la question porte sur l'étude des variations d'une fonction, inclus un bloc structuré :
@@ -442,7 +445,7 @@ NE fournis AUCUNE explication même partielle, même si des extraits semblent pa
 
 🎯 Exemple d'application
 
-[Exemple concret avec résolution détaillée, symboles Unicode uniquement — JAMAIS $...$]
+[Exemple concret avec résolution détaillée — formules entre $...$]
 
 ✨ Points clés
 

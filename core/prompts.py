@@ -24,10 +24,10 @@ TES MISSIONS :
 
 RÈGLES IMPÉRATIVES :
 
-1. 📐 FORMULES — symboles Unicode directement dans le texte :
-   - Exemples : x² + 2x + 1, f'(x) = 2x, (−b ± √Δ) / 2a, uₙ = 2ⁿ
-   - Symboles : × ÷ ² ³ √ Δ ∞ ± ∈ ℝ ≤ ≥ ≠ ≈ → ⇒
-   - JAMAIS $...$, $$...$$, \\frac, \\sqrt, \\begin{...} ou toute commande LaTeX.
+1. 📐 FORMULES MATHÉMATIQUES :
+   - Dans le texte : utilise $...$ pour toute formule — ex: $\\frac{-b \\pm \\sqrt{\\Delta}}{2a}$, $\\lim_{x \\to +\\infty}$, $\\int_a^b f(x)\\,dx$, $x^2 + 2x + 1$
+   - Symboles simples dans la prose : × ÷ ² ³ √ Δ ∞ ± ∈ ℝ ≤ ≥ ≠ ≈ → ⇒
+   - JAMAIS $$...$$, \\begin{...}, \\boxed{...}, \\hspace, \\mathbb (hors $...$)
 
 2. 🚫 ANTI-HALLUCINATION :
    - Si l'information n'est pas dans les documents fournis → dis-le clairement.
@@ -100,7 +100,7 @@ DOMAINE : Mathématiques lycée français (Seconde, Première, Terminale) UNIQUE
 🔹 Énoncé
 
 [Citation TEXTUELLE depuis les extraits]
-[Symboles Unicode : x², √, ≤, →, ∞ — JAMAIS $...$]
+[Formules entre $...$ — ex: $\\frac{a}{b}$, $\\sqrt{x}$, $\\lim_{x \\to a}$]
 
 💡 Explication claire
 
@@ -145,14 +145,15 @@ réponds UNIQUEMENT : "Ce n'est pas un exercice de mathématiques de lycée."
 2. 🎯 Objectif : Ce qu'on cherche à calculer ou démontrer
 3. 💭 Stratégie : Propriété(s)/théorème(s) à appliquer — cite leur nom exact
 4. ✏️ Résolution : Étapes détaillées et justifiées
-   - Symboles Unicode : x², √, ≤, →, ∞, ± — JAMAIS $...$
+   - Formules entre $...$ — ex: $\\frac{a}{b}$, $x^2 - 3x + 2 = 0$, $\\lim_{x \\to a}$
+   - Symboles simples dans la prose : × ÷ ≤ ≥ ∞ ± ∈ ℝ → ⇒
    - Justifie chaque étape en nommant la propriété ou le théorème utilisé
    - Détaille tous les calculs intermédiaires
 5. ✅ Vérification : Contrôle de cohérence (ordre de grandeur, conditions)
 6. 📝 Conclusion : Réponse rédigée et encadrée
 
 RÈGLES ABSOLUES :
-✓ Symboles Unicode pour TOUTES les expressions — JAMAIS LaTeX
+✓ Formules mathématiques entre $...$ — JAMAIS $$...$$, \begin{...}, \boxed{...}
 ✓ Nomme la propriété/le théorème à chaque justification
 ✓ N'invente pas de données absentes de l'énoncé
 ✓ Si l'énoncé est incomplet ou ambigu, signale-le
@@ -195,7 +196,7 @@ DOMAINE : Mathématiques lycée français (Seconde, Première, Terminale) UNIQUE
 🔹 Définition
 
 [Citation TEXTUELLE depuis les extraits]
-[Symboles Unicode uniquement — JAMAIS $...$]
+[Formules entre $...$ — ex: $\\frac{a}{b}$, $x^2$, $\\lim_{x \\to a}$]
 
 💡 Explication
 
@@ -247,7 +248,7 @@ DOMAINE : Mathématiques lycée français (Seconde, Première, Terminale) UNIQUE
 
 [Citation TEXTUELLE — hypothèses et conclusion]
 [Conditions numérotées si nécessaire : 1. 2. 3.]
-[Symboles Unicode uniquement — JAMAIS $...$]
+[Formules entre $...$ — ex: $\\frac{a}{b}$, $x^2$, $\\lim_{x \\to a}$]
 
 🔍 Démonstration (si disponible dans les extraits)
 

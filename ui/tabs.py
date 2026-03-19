@@ -134,8 +134,8 @@ def fix_latex_for_streamlit(text: str) -> str:
     # ── \[ ... \] (display math LaTeX) → $$ ... $$ ───────────────────────────
     text = re.sub(r'\\\[(.{1,2000}?)\\\]', lambda m: f'$${m.group(1).strip()}$$', text)
     # ── [ formule ] (LLM utilise crochets espacés comme délimiteur math) ──────
-    # Ne matche que [ contenu ] avec espace interne (jamais [lien](url) markdown)
-    text = re.sub(r'\[\s([^\[\]\n]{1,500})\s\]', r'\1', text)
+    # Espace LITTÉRAL (pas \s) pour ne pas avaler les sauts de ligne ni les intervalles
+    text = re.sub(r'\[ ([^\[\]\n]{1,2000}) \]', r'\1', text)
 
     # ── Commandes d'espacement non supportées ────────────────────────────────
     text = re.sub(r'\\[hv]space\*?\{[^}]{0,100}\}', ' ', text)
@@ -184,7 +184,8 @@ def fix_latex_for_streamlit(text: str) -> str:
         (r'\\cup',            '∪'),
         (r'\\cap',            '∩'),
         (r'\\emptyset',       '∅'),
-        # Ensembles
+        # Ensembles et opérateurs ensemblistes
+        (r'\\setminus\b',     '∖'),
         (r'\\mathbb\{R\}',    'ℝ'),
         (r'\\mathbb\{N\}',    'ℕ'),
         (r'\\mathbb\{Z\}',    'ℤ'),
@@ -234,8 +235,17 @@ def fix_latex_for_streamlit(text: str) -> str:
         """Remplace les commandes LaTeX hors $...$ par leurs symboles Unicode."""
         for pattern, symbol in _LATEX_UNICODE:
             segment = re.sub(pattern, symbol, segment)
-        # \frac{a}{b} → (a)/(b)
-        segment = re.sub(r'\\frac\{([^}]{1,500})\}\{([^}]{1,500})\}', r'(\1)/(\2)', segment)
+        # \frac{a}{b} → a/b ou (a)/(b) selon la complexité de l'expression
+        def _frac_convert(m):
+            num, den = m.group(1).strip(), m.group(2).strip()
+            # Parenthèses seulement si l'expression contient + ou - (pas en tête de signe)
+            def _needs_parens(s):
+                core = s[1:] if s and s[0] in '+-' else s
+                return bool(re.search(r'[+\-]', core))
+            n = f'({num})' if _needs_parens(num) else num
+            d = f'({den})' if _needs_parens(den) else den
+            return f'{n}/{d}'
+        segment = re.sub(r'\\frac\{([^}]{1,500})\}\{([^}]{1,500})\}', _frac_convert, segment)
         # \sqrt{x} → √(x)
         segment = re.sub(r'\\sqrt\{([^}]{1,500})\}', r'√(\1)', segment)
         # \lim_{x→a} → lim
@@ -649,19 +659,27 @@ NE fournis AUCUNE résolution même partielle.
 - Réponds à CHAQUE question posée, dans leur ordre exact, de la première à la dernière.
 - Copie le numéro/intitulé de chaque question EXACTEMENT comme il apparaît (1., 1.1., Partie A, etc.).
 
-⚠️ RÈGLE N°2 — CALCULS :
-- Symboles directement dans le texte : × ÷ ⇒ → ≤ ≥ ≠ ≈ ∞ ± ∈ ℝ ² ³ √ Δ
-- Exposants : x², x³, xⁿ — Fractions : (−b ± √Δ) / 2a — Indices : x₁, x₂
-- JAMAIS : \\times, \\Rightarrow, \\mathbb{{R}}, \\begin{{...}}, \\boxed{{...}}, $...$, $$...$$
-- Parenthèses OBLIGATOIRES autour de tout nombre négatif : f(−1) = 2 × (−1) − 3
-- Détaille chaque étape (× ÷ avant + −)
+⚠️ RÈGLE N°2 — FORMAT MATHÉMATIQUE :
+- Toute formule ou expression mathématique doit être encadrée avec $...$ (rendu KaTeX) :
+  $\\frac{{-b \\pm \\sqrt{{\\Delta}}}}{{2a}}$, $\\lim_{{x \\to +\\infty}} f(x) = L$, $\\int_{{a}}^{{b}} f(x)\\,dx$, $x^2 - 3x + 2 = 0$, $f'(x) = 2x - 3$
+- Symboles simples dans la prose (sans $) : × ÷ ⇒ → ≤ ≥ ≠ ∞ ± ∈ ℝ
+- JAMAIS : \\times, \\Rightarrow, \\mathbb{{R}}, \\begin{{...}}, \\boxed{{...}}, $$...$$
+- Parenthèses OBLIGATOIRES autour de tout nombre négatif dans le texte : f(−1) = 2 × (−1) − 3
+- Détaille chaque étape
 
-⚠️ RÈGLE N°3 — TABLEAUX DE VALEURS :
-Si l'énoncé demande un tableau de valeurs, calcule CHAQUE valeur et affiche un tableau markdown COMPLET :
+⚠️ RÈGLE N°3 — TABLEAUX :
+A) Tableau de valeurs : calcule CHAQUE valeur et affiche un tableau markdown COMPLET :
 | x   | v1 | v2 | v3 | v4 | v5 |
 |-----|----|----|----|----|-----|
 | f(x)| r1 | r2 | r3 | r4 | r5 |
 → Remplace chaque cellule par la valeur calculée réelle. Ne laisse JAMAIS de case vide ou avec "?".
+
+B) Tableau de variations : si l'énoncé demande d'étudier les variations (croissance, décroissance, extrema), fournis OBLIGATOIREMENT un tableau de variations en markdown. Modèle avec deux paliers :
+| x      | -∞ |    | a  |    | b  |    | +∞ |
+|--------|----|----|----|----|----|----|-----|
+| f'(x)  |    | +  | 0  | -  | 0  | +  |    |
+| f(x)   | -∞ | ↗  |max | ↘  |min | ↗  | +∞ |
+Règles : ↗ = croissant, ↘ = décroissant. Indique la valeur de f aux extrema. Adapte le nombre de colonnes au nombre de paliers réels.
 {rag_section}
 ⚠️ RÈGLE N°4 — JUSTIFICATIONS :
 ✓ "D'après la définition d'une fonction affine f(x) = ax + b, ici a = 2 et b = −3."
@@ -729,10 +747,15 @@ Si la question porte sur un sujet HORS programme lycée français (Seconde/Premi
 NE fournis AUCUNE explication même partielle.
 
 Le document fourni est le contexte de référence. Lis-le entièrement et réponds à la question à partir de ce document.
-- Symboles directement dans le texte : × ÷ ⇒ → ≤ ≥ ≠ ≈ ∞ ± ∈ ℝ ² ³ √ Δ
-- Exposants : x², x³ — Fractions : (−b ± √Δ) / 2a — Indices : x₁, x₂
-- JAMAIS : \\times, \\Rightarrow, \\mathbb{{R}}, \\begin{{...}}, \\boxed{{...}}, $...$, $$...$$
-- Tableau de valeurs → tableau markdown (JAMAIS \\begin{{tabular}}){conv_part}"""
+- Formules mathématiques entre $...$ : $\\frac{{a}}{{b}}$, $\\lim_{{x \\to a}}$, $\\int_{{a}}^{{b}} f(x)\\,dx$, $x^2-3x+2$
+- Symboles simples dans la prose sans $ : × ÷ ⇒ → ≤ ≥ ≠ ∞ ± ∈ ℝ
+- JAMAIS : \\times, \\Rightarrow, \\mathbb{{R}}, \\begin{{...}}, \\boxed{{...}}, $$...$$
+- Tableau de valeurs → tableau markdown (JAMAIS \\begin{{tabular}})
+- Tableau de variations : utilise ↗ (croissant) et ↘ (décroissant), indique les extrema. Exemple :
+  | x    | -∞ |   | a  |   | +∞ |
+  |------|----|---|----|---|-----|
+  | f'(x)|    | - | 0  | + |    |
+  | f(x) | +∞ | ↘ |min | ↗ |    |{conv_part}"""
 
             cours_user = f"Question : {question}\n\nDocument :\n{doc_context}"
             with st.spinner("📄 Analyse du document..."):
