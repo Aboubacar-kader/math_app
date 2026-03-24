@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # Configuration 1min.ai
     MIN_AI_API_KEY: str = ""
     MIN_AI_MODEL: str = "gpt-4o"
-    MIN_AI_BASE_URL: str = "https://api.1min.ai"
+    MIN_AI_BASE_URL: str = "https://api.openai.com/v1"
     MIN_AI_TEMPERATURE: float = 0.3
 
     # Configuration embeddings (local, sans GPU)
