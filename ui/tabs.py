@@ -1121,7 +1121,7 @@ def render_continuous_chat(
 
         with col2:
             user_input = st.text_area(
-                "",
+                "Message",
                 placeholder=placeholder,
                 height=40,
                 key=f"input_{section_key}",

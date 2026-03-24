@@ -61,9 +61,9 @@ def _setup_root_logger() -> None:
         # Streamlit Cloud : système de fichiers en lecture seule possible
         pass
 
-    # ── Handler console (DEBUG local uniquement) ───────────────────────────
+    # ── Handler console ────────────────────────────────────────────────────
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.WARNING)  # Uniquement WARNING+ en console
+    console_handler.setLevel(logging.INFO)
     console_handler.setFormatter(formatter)
     root.addHandler(console_handler)
 

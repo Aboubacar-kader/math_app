@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     # Configuration Qdrant
     QDRANT_PATH: str = "./data/vectorstore"
     QDRANT_COLLECTION_NAME: str = "math_documents"
+    # Qdrant Cloud (optionnel) — si défini, le mode cloud est activé automatiquement
+    QDRANT_URL: Optional[str] = None
+    QDRANT_API_KEY: Optional[str] = None
 
     # Traitement de texte
     MAX_FILE_SIZE_MB: int = 50

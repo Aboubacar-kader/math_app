@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import List, Dict, Any
 import json
 import hashlib
+import io
+import base64
+import time
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -18,6 +21,10 @@ logger = get_logger(__name__)
 KNOWLEDGE_DIR = Path("data/knowledge_base")
 CACHE_FILE    = Path("data/knowledge_base/.indexed_cache.json")
 
+# Version du cache — incrémenter quand l'extraction change (ex: ajout OCR)
+# Cela force une ré-indexation complète propre au prochain démarrage.
+CACHE_VERSION = "3"
+
 # Extensions supportées
 SUPPORTED_EXTENSIONS = {
     ".pdf", ".docx", ".txt", ".md",
@@ -25,34 +32,38 @@ SUPPORTED_EXTENSIONS = {
 }
 
 
-def _load_cache() -> Dict[str, str]:
+def _load_cache() -> tuple[Dict[str, str], bool]:
     """
     Charge le cache des fichiers déjà indexés.
-    Évite de ré-indexer les fichiers inchangés.
+    Retourne aussi un booléen indiquant si une migration est nécessaire.
 
     Returns:
-        Dictionnaire {chemin_fichier: hash_contenu}
+        (cache, needs_migration) — needs_migration=True si le cache est d'une
+        ancienne version et que la collection doit être réinitialisée.
     """
     try:
         if CACHE_FILE.exists():
             with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+            if data.get("__version__") != CACHE_VERSION:
+                logger.info(
+                    "Cache obsolète (v%s → v%s) — ré-indexation complète avec OCR.",
+                    data.get("__version__", "1"), CACHE_VERSION,
+                )
+                return {}, True
+            return {k: v for k, v in data.items() if k != "__version__"}, False
     except Exception:
         pass
-    return {}
+    return {}, False
 
 
 def _save_cache(cache: Dict[str, str]):
-    """
-    Sauvegarde le cache des fichiers indexés.
-
-    Args:
-        cache: Dictionnaire à sauvegarder
-    """
+    """Sauvegarde le cache avec numéro de version."""
     try:
         CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        data = {"__version__": CACHE_VERSION, **cache}
         with open(CACHE_FILE, "w", encoding="utf-8") as f:
-            json.dump(cache, f, indent=2)
+            json.dump(data, f, indent=2)
     except Exception as e:
         logger.error("Erreur sauvegarde cache : %s", e)
 
@@ -137,6 +148,112 @@ Seuls les fichiers nouveaux ou modifiés sont ré-indexés.
 """, encoding="utf-8")
 
 
+def _tesseract_available() -> bool:
+    """Vérifie si Tesseract OCR est installé sur la machine."""
+    import shutil
+    import subprocess
+    # Chercher dans le PATH d'abord
+    if shutil.which("tesseract"):
+        return True
+    # Emplacement par défaut Windows
+    win_path = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    if Path(win_path).exists():
+        try:
+            import pytesseract
+            pytesseract.pytesseract.tesseract_cmd = win_path
+        except ImportError:
+            pass
+        return True
+    return False
+
+
+def _ocr_page_tesseract(pil_image, page_num: int, filename: str) -> str:
+    """OCR local via Tesseract — gratuit, sans limite de débit."""
+    try:
+        import pytesseract
+        win_path = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+        if Path(win_path).exists():
+            pytesseract.pytesseract.tesseract_cmd = win_path
+        text = pytesseract.image_to_string(pil_image, lang="fra+eng")
+        return text.strip()
+    except Exception as e:
+        logger.warning("Tesseract page %d de '%s' echoue : %s", page_num, filename, e)
+        return ""
+
+
+def _ocr_page_vision(page, page_num: int, filename: str) -> str:
+    """OCR d'une page PDF scannée.
+    Priorité : Tesseract (local, sans limite) → API Vision (avec retry 429).
+    """
+    pil_image = page.to_image(resolution=150).original
+
+    # 1. Tesseract local — prioritaire si disponible
+    if _tesseract_available():
+        return _ocr_page_tesseract(pil_image, page_num, filename)
+
+    # 2. Fallback : API Vision avec retry exponentiel
+    from config.settings import settings
+    import requests as _req
+
+    buf = io.BytesIO()
+    pil_image.save(buf, format="PNG")
+    b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+
+    url = f"{settings.MIN_AI_BASE_URL.rstrip('/')}/chat/completions"
+    payload = {
+        "model": settings.MIN_AI_MODEL,
+        "messages": [{
+            "role": "user",
+            "content": [
+                {"type": "text", "text": (
+                    "Transcris intégralement tout le texte et les formules "
+                    "mathematiques de cette page de cours. "
+                    "Conserve la structure : titres, numeros, tableaux, formules. "
+                    "Ne resous rien, transcris uniquement."
+                )},
+                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+            ],
+        }],
+        "max_tokens": 4096,
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {settings.MIN_AI_API_KEY.strip()}",
+    }
+
+    delays = [10, 30]  # 2 tentatives suffisent — si ça échoue, quota épuisé
+    for attempt, delay in enumerate(delays + [None], start=1):
+        try:
+            r = _req.post(url, headers=headers, json=payload, timeout=90)
+            if r.status_code == 429:
+                if delay is not None:
+                    logger.warning(
+                        "OCR page %d de '%s' — 429 rate limit, retry %d/%d dans %ds",
+                        page_num, filename, attempt, len(delays), delay
+                    )
+                    time.sleep(delay)
+                    continue
+                # Quota épuisé après tous les retries → signal d'abandon
+                return "__RATE_LIMIT__"
+            r.raise_for_status()
+            time.sleep(3)  # pause légère entre pages
+            return r.json()["choices"][0]["message"]["content"].strip()
+        except Exception as e:
+            if "429" in str(e):
+                if delay is not None:
+                    logger.warning(
+                        "OCR page %d de '%s' — 429 rate limit, retry %d/%d dans %ds",
+                        page_num, filename, attempt, len(delays), delay
+                    )
+                    time.sleep(delay)
+                    continue
+                return "__RATE_LIMIT__"
+            logger.warning("OCR page %d de '%s' echoue : %s", page_num, filename, e)
+            return ""
+
+    return "__RATE_LIMIT__"
+
+
 def _extract_text_from_file(filepath: Path) -> str:
     """
     Extrait le texte d'un fichier selon son extension.
@@ -157,10 +274,10 @@ def _extract_text_from_file(filepath: Path) -> str:
             import pdfplumber
             text = ""
             with pdfplumber.open(filepath) as pdf:
-                for page in pdf.pages:
+                for page_num, page in enumerate(pdf.pages):
                     page_text = page.extract_text() or ""
 
-                    # Extraire les tableaux et les convertir en texte structuré
+                    # Tableaux → texte structuré
                     tables = page.extract_tables()
                     table_text = ""
                     for table in tables:
@@ -169,10 +286,23 @@ def _extract_text_from_file(filepath: Path) -> str:
                             table_text += " | ".join(row_cells) + "\n"
                         table_text += "\n"
 
-                    if page_text.strip():
-                        text += page_text + "\n"
+                    page_content = page_text
                     if table_text.strip():
-                        text += table_text
+                        page_content += "\n" + table_text
+
+                    # Fallback OCR si page vide (PDF scanné)
+                    if not page_content.strip():
+                        ocr_result = _ocr_page_vision(page, page_num + 1, filepath.name)
+                        if ocr_result == "__RATE_LIMIT__":
+                            logger.warning(
+                                "Quota OCR épuisé sur '%s' (page %d) — fichier ignoré.",
+                                filepath.name, page_num + 1
+                            )
+                            break  # passer au fichier suivant
+                        page_content = ocr_result
+
+                    if page_content.strip():
+                        text += f"\n--- Page {page_num + 1} ---\n{page_content}"
             return text
 
         elif ext == ".docx":
@@ -236,16 +366,48 @@ def init_knowledge_base(force_reindex: bool = False):
 
     logger.info("Vérification de la base de connaissances...")
 
+    # Mode cloud : si Qdrant Cloud est configuré et déjà peuplé → pas d'indexation locale
+    from config.settings import settings as _settings
+    if _settings.QDRANT_URL:
+        try:
+            count = vectorstore_manager.client.count(
+                collection_name=vectorstore_manager.collection_name
+            ).count
+            if count > 0:
+                logger.info(
+                    "Mode cloud — %d vecteurs déjà indexés dans Qdrant Cloud. Indexation locale ignorée.",
+                    count
+                )
+                return
+            logger.info("Mode cloud — collection vide, indexation des fichiers locaux...")
+        except Exception as e:
+            logger.warning("Mode cloud — vérification collection échouée : %s", e)
+
     # Collecter les fichiers disponibles
     files = _collect_files()
 
     if not files:
-        logger.warning("Aucun fichier trouvé dans data/knowledge_base/")
-        logger.info("Placez vos cours dans : %s", KNOWLEDGE_DIR.absolute())
+        if _settings.QDRANT_URL:
+            logger.info("Mode cloud — aucun fichier local, vectorstore cloud utilisé tel quel.")
+        else:
+            logger.warning("Aucun fichier trouvé dans data/knowledge_base/")
+            logger.info("Placez vos cours dans : %s", KNOWLEDGE_DIR.absolute())
         return
 
-    # Charger le cache
-    cache = _load_cache() if not force_reindex else {}
+    # Charger le cache (détecte si migration nécessaire)
+    if force_reindex:
+        cache, needs_migration = {}, True
+    else:
+        cache, needs_migration = _load_cache()
+
+    # Migration : vider la collection pour repartir proprement avec OCR
+    if needs_migration:
+        logger.info("Réinitialisation de la collection vectorstore pour migration OCR...")
+        try:
+            vectorstore_manager.clear_collection()
+            logger.info("Collection réinitialisée.")
+        except Exception as e:
+            logger.error("Erreur réinitialisation collection : %s", e)
 
     # Filtrer les fichiers à (ré-)indexer
     files_to_index = []
@@ -318,8 +480,8 @@ def get_knowledge_base_stats() -> Dict[str, Any]:
     Returns:
         Dictionnaire de statistiques
     """
-    files  = _collect_files()
-    cache  = _load_cache()
+    files        = _collect_files()
+    cache, _     = _load_cache()
 
     indexed = sum(
         1 for f in files

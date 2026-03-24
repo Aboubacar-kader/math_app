@@ -3,11 +3,14 @@ IntelliMath - Application principale COMPLÈTE
 Historique des conversations + Analyse de fichiers + Chargement simultané
 """
 
+import os
+os.environ.setdefault("HF_HUB_DISABLE_IMPLICIT_TOKEN", "1")
+os.environ.setdefault("TRANSFORMERS_VERBOSITY", "error")
+
 import streamlit as st
 from datetime import datetime
 from typing import List, Dict
 import json
-import os
 import uuid
 
 # Configuration de la page
