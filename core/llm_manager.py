@@ -72,7 +72,8 @@ def call_1minai(system_prompt: str, user_content: str, retries: int = 2) -> str:
             raise ValueError("Format de réponse inattendu")
 
         except requests.HTTPError as e:
-            logger.warning("HTTP %s — tentative %d", e.response.status_code, attempt + 1)
+            body = e.response.text[:300] if e.response is not None else ""
+            logger.warning("HTTP %s — tentative %d — %s", e.response.status_code, attempt + 1, body)
             if attempt < retries:
                 time.sleep(2)
                 continue

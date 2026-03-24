@@ -81,7 +81,22 @@ class VectorStoreManager:
                     distance=Distance.COSINE
                 )
             )
+
+        # Créer l'index payload pour source_type (requis par Qdrant Cloud pour le filtrage)
+        self._ensure_payload_indexes()
     
+    def _ensure_payload_indexes(self):
+        """Crée les index payload nécessaires au filtrage (requis par Qdrant Cloud)."""
+        from qdrant_client.models import PayloadSchemaType
+        try:
+            self.client.create_payload_index(
+                collection_name=self.collection_name,
+                field_name="metadata.source_type",
+                field_schema=PayloadSchemaType.KEYWORD,
+            )
+        except Exception:
+            pass  # Index déjà existant — ignorer
+
     # ════════════════════════════════════════════════════════
     # AJOUT DE DOCUMENTS
     # ════════════════════════════════════════════════════════
