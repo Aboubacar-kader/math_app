@@ -84,13 +84,13 @@ def call_1minai(system_prompt: str, user_content: str, retries: int = 2) -> str:
             if attempt < retries:
                 time.sleep(2)
                 continue
-            break
+            raise RuntimeError(f"HTTP {e.response.status_code} : {body[:200]}")
         except Exception as e:
-            logger.warning("Erreur tentative %d : %s", attempt + 1, type(e).__name__)
+            logger.warning("Erreur tentative %d : %s — %s", attempt + 1, type(e).__name__, str(e)[:200])
             if attempt < retries:
                 time.sleep(2)
                 continue
-            break
+            raise RuntimeError(f"{type(e).__name__} : {str(e)[:200]}")
 
     raise RuntimeError(f"Service LLM indisponible (après {retries + 1} tentatives)")
 
