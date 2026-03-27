@@ -59,6 +59,8 @@ def call_1minai(system_prompt: str, user_content: str, retries: int = 2) -> str:
             # Rate limit → attendre et réessayer
             if response.status_code == 429:
                 wait = 3 * (attempt + 1)
+                logger.warning("429 rate-limit — tentative %d/%d — attente %ds — %s",
+                               attempt + 1, retries + 1, wait, response.text[:200])
                 time.sleep(wait)
                 continue
 
