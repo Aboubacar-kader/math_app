@@ -14,7 +14,7 @@ class RAGService:
 
     def __init__(self):
         self.last_sources = []
-        self.min_relevance_score = 0.38
+        self.min_relevance_score = 0.25
         self.max_documents = 3
 
     # ════════════════════════════════════════════════════════
@@ -280,11 +280,12 @@ Commence la résolution :"""
 DOMAINE STRICT : Mathématiques lycée français (Seconde, Première, Terminale) UNIQUEMENT.
 
 🚫 RÈGLE DE PÉRIMÈTRE — PRIORITAIRE ET ABSOLUE :
-Avant de répondre, vérifie si le sujet appartient au programme officiel du lycée français (Seconde / Première / Terminale).
-Sujets HORS PROGRAMME (liste non exhaustive) : suites de Cauchy, espaces vectoriels, algèbre linéaire, topologie, analyse complexe, intégrales de Lebesgue, séries de Fourier, équations différentielles avancées, théorie des groupes, analyse fonctionnelle, probabilités avancées (loi de Poisson, processus stochastiques), géométrie différentielle, classes préparatoires, université.
-Si le sujet est HORS PROGRAMME lycée → réponds UNIQUEMENT et SANS EXCEPTION :
+Réponds UNIQUEMENT aux sujets du programme officiel du lycée (Seconde / Première / Terminale).
+Sujets clairement HORS PROGRAMME (post-bac, prépa, université) : suites de Cauchy, espaces vectoriels, algèbre linéaire, topologie, analyse complexe, intégrales de Lebesgue, séries de Fourier, théorie des groupes, analyse fonctionnelle.
+Sujets VALIDES du programme lycée (non exhaustif) : fonctions, dérivées, intégrales, suites numériques, limites, théorème des gendarmes, théorème de Rolle, probabilités, statistiques, géométrie, trigonométrie, nombres complexes, vecteurs, matrices, équations, polynômes.
+Si le sujet est CLAIREMENT HORS PROGRAMME post-bac → réponds UNIQUEMENT :
 "Je ne dispose pas d'information sur le terme abordé."
-NE fournis AUCUNE explication, même partielle. NE dis pas "ce sujet est post-bac mais voici quand même...".
+Si le sujet est dans le programme lycée ou proche → réponds normalement depuis tes connaissances.
 
 FORMULES : Symboles directement dans le texte : × ÷ ⇒ → ≤ ≥ ≠ ≈ ∞ ± ∈ ℝ ² ³ √ Δ
 JAMAIS de LaTeX ($...$, $$...$$, \\begin{...})
