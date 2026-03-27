@@ -23,11 +23,11 @@ except Exception:
 logger = get_logger(__name__)
 
 # Diagnostic au démarrage — vérifie la config LLM (clé masquée)
-_key = settings.MIN_AI_API_KEY.strip()
+_key_set = bool(settings.MIN_AI_API_KEY.strip())
 logger.info("LLM config — url=%s | model=%s | key=%s",
             settings.MIN_AI_BASE_URL,
             settings.MIN_AI_MODEL,
-            (_key[:8] + "…" if len(_key) > 8 else ("VIDE" if not _key else _key)))
+            "configurée" if _key_set else "VIDE")
 
 
 def call_1minai(system_prompt: str, user_content: str, retries: int = 2) -> str:
