@@ -54,7 +54,7 @@ def call_1minai(system_prompt: str, user_content: str, retries: int = 2) -> str:
 
     for attempt in range(retries + 1):
         try:
-            response = requests.post(url, headers=headers, json=payload, timeout=120)
+            response = requests.post(url, headers=headers, json=payload, timeout=(15, 120))
 
             # Rate limit → attendre et réessayer
             if response.status_code == 429:
@@ -88,9 +88,10 @@ def call_1minai(system_prompt: str, user_content: str, retries: int = 2) -> str:
                 continue
             raise RuntimeError(f"HTTP {e.response.status_code} : {body[:200]}")
         except Exception as e:
+            wait = 5 * (attempt + 1)
             logger.warning("Erreur tentative %d : %s — %s", attempt + 1, type(e).__name__, str(e)[:200])
             if attempt < retries:
-                time.sleep(2)
+                time.sleep(wait)
                 continue
             raise RuntimeError(f"{type(e).__name__} : {str(e)[:200]}")
 
