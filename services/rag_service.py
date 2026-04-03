@@ -7,6 +7,12 @@ from typing import List, Tuple, Dict, Generator
 from core.vectorstore_manager import vectorstore_manager
 from core.llm_manager import call_1minai
 from config.settings import settings
+try:
+    from utils.logger import get_logger
+    logger = get_logger(__name__)
+except Exception:
+    import logging
+    logger = logging.getLogger(__name__)
 
 
 class RAGService:
@@ -267,11 +273,15 @@ Commence la résolution :"""
     def _filter_relevant_documents(self, documents: List[Dict]) -> List[Dict]:
         """Filtre les documents en dessous du seuil de pertinence."""
         if not documents:
+            logger.info("Filtre RAG : aucun document reçu")
             return []
-        return [
+        filtered = [
             doc for doc in documents[:self.max_documents]
             if doc.get('score', 0) >= self.min_relevance_score
         ]
+        logger.info("Filtre RAG : %d/%d docs passent le seuil %.2f",
+                    len(filtered), len(documents), self.min_relevance_score)
+        return filtered
 
     def _llm_fallback(self, question: str) -> str:
         """Répond directement via le LLM quand le RAG ne trouve rien de pertinent."""

@@ -12,6 +12,12 @@ import shutil
 from pathlib import Path
 from config.settings import settings
 from core.llm_manager import llm_manager
+try:
+    from utils.logger import get_logger
+    logger = get_logger(__name__)
+except Exception:
+    import logging
+    logger = logging.getLogger(__name__)
 
 
 class VectorStoreManager:
@@ -209,7 +215,10 @@ class VectorStoreManager:
                 "score": result.score,
                 "metadata": result.payload.get("metadata", {})
             })
-        
+
+        scores = [f"{d['score']:.3f}" for d in documents]
+        logger.info("Recherche '%s' → %d résultats, scores: %s", query[:60], len(documents), scores)
+
         return documents
     
     # ════════════════════════════════════════════════════════
