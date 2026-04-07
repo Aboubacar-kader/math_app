@@ -134,8 +134,14 @@ def fix_latex_for_streamlit(text: str) -> str:
     # ── \[ ... \] (display math LaTeX) → $$ ... $$ ───────────────────────────
     text = re.sub(r'\\\[(.{1,2000}?)\\\]', lambda m: f'$${m.group(1).strip()}$$', text)
     # ── [ formule ] (LLM utilise crochets espacés comme délimiteur math) ──────
-    # Espace LITTÉRAL (pas \s) pour ne pas avaler les sauts de ligne ni les intervalles
-    text = re.sub(r'\[ ([^\[\]\n]{1,2000}) \]', r'\1', text)
+    # Espace LITTÉRAL (pas \s) pour ne pas avaler les sauts de ligne ni les intervalles.
+    # Autorise \cmd[n]{...} à l'intérieur (ex : \sqrt[3]{38}) en plus des caractères normaux.
+    # Convertit vers $...$ pour un rendu KaTeX correct.
+    text = re.sub(
+        r'\[ ((?:[^\[\]\n]|\\\w[\w*]*\[[^\]\n]{0,30}\]){1,2000}) \]',
+        lambda m: f'${m.group(1).strip()}$',
+        text,
+    )
 
     # ── Commandes d'espacement non supportées ────────────────────────────────
     text = re.sub(r'\\[hv]space\*?\{[^}]{0,100}\}', ' ', text)

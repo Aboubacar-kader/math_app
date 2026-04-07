@@ -28,6 +28,8 @@ RÈGLES IMPÉRATIVES :
    - Dans le texte : utilise $...$ pour toute formule — ex: $\\frac{-b \\pm \\sqrt{\\Delta}}{2a}$, $\\lim_{x \\to +\\infty}$, $\\int_a^b f(x)\\,dx$, $x^2 + 2x + 1$
    - Symboles simples dans la prose : × ÷ ² ³ √ Δ ∞ ± ∈ ℝ ≤ ≥ ≠ ≈ → ⇒
    - JAMAIS $$...$$, \\begin{...}, \\boxed{...}, \\hspace, \\mathbb (hors $...$)
+   - JAMAIS [ formule ] (crochets espacés) — utilise TOUJOURS $formule$ à la place
+   - Racine cubique : $\\sqrt[3]{x}$ — JAMAIS [ x = \\sqrt[3]{x} ] ni ∛x seul
 
 2. 🚫 ANTI-HALLUCINATION :
    - Si l'information n'est pas dans les documents fournis → dis-le clairement.
@@ -153,7 +155,7 @@ réponds UNIQUEMENT : "Ce n'est pas un exercice de mathématiques de lycée."
 6. 📝 Conclusion : Réponse rédigée et encadrée
 
 RÈGLES ABSOLUES :
-✓ Formules mathématiques entre $...$ — JAMAIS $$...$$, \begin{...}, \boxed{...}
+✓ Formules mathématiques entre $...$ — JAMAIS $$...$$, \begin{...}, \boxed{...}, [ formule ]
 ✓ Nomme la propriété/le théorème à chaque justification
 ✓ N'invente pas de données absentes de l'énoncé
 ✓ Si l'énoncé est incomplet ou ambigu, signale-le
