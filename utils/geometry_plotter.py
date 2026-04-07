@@ -199,9 +199,16 @@ def detect_figure_needed(text: str) -> Dict[str, any]:
     # Priorité : si une fonction nommée est détectée, forcer le type 'fonction'
     if named_func_formula:
         detected_type = 'fonction'
+    # Priorité homothétie : doit être testée AVANT la boucle générique car
+    # la réponse LLM contient souvent "droite" (ex : "la droite (OA)") qui
+    # déclencherait faussement le type 'fonction'.
+    elif any(kw in text_lower for kw in figure_types['homothetie']):
+        detected_type = 'homothetie'
     else:
         detected_type = None
         for fig_type, keywords in figure_types.items():
+            if fig_type == 'homothetie':
+                continue  # déjà testé ci-dessus
             if any(kw in text_lower for kw in keywords):
                 detected_type = fig_type
                 break
