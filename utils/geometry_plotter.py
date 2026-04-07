@@ -193,6 +193,7 @@ def detect_figure_needed(text: str) -> Dict[str, any]:
         'angle': ['angle'],
         'polygone': ['polygone', 'pentagone', 'hexagone', 'octogone', 'heptagone'],
         'carre': ['carré'],
+        'homothetie': ['homothétie', 'homothetie', 'homothéties', 'homotheties'],
     }
 
     # Priorité : si une fonction nommée est détectée, forcer le type 'fonction'
@@ -405,6 +406,26 @@ def extract_parameters(text: str, figure_type: str) -> dict:
     point_labels = re.findall(r'\b([A-Z])\b', text)
     if point_labels:
         params['points'] = list(dict.fromkeys(point_labels))  # dédoublonné, ordre conservé
+
+    # ── Rapport d'homothétie (k) ─────────────────────────────────────────────
+    # Fraction prioritaire : "rapport 1/2", "k = -3/2"
+    frac_m = re.search(r'(?:rapport|ratio)\s+k?\s*=?\s*(-?\d+)\s*/\s*(\d+)', text, re.IGNORECASE)
+    if not frac_m:
+        frac_m = re.search(r'\bk\s*=\s*(-?\d+)\s*/\s*(\d+)', text)
+    if frac_m:
+        params['homothetie_k'] = float(frac_m.group(1)) / float(frac_m.group(2))
+    else:
+        k_patterns = [
+            r'de\s+rapport\s+(-?\d+(?:[.,]\d+)?)',
+            r'rapport\s+k?\s*=?\s*(-?\d+(?:[.,]\d+)?)',
+            r'\bk\s*=\s*(-?\d+(?:[.,]\d+)?)',
+            r'ratio\s+(-?\d+(?:[.,]\d+)?)',
+        ]
+        for pat in k_patterns:
+            mk = re.search(pat, text, re.IGNORECASE)
+            if mk:
+                params['homothetie_k'] = float(mk.group(1).replace(',', '.'))
+                break
 
     return params
 
@@ -1034,6 +1055,97 @@ def _create_polygon(n_sides: int = 5, radius: float = 2.0) -> go.Figure:
     return fig
 
 
+def _create_homothetie(center=(0, 0), k=2.0, points=None, labels=None) -> go.Figure:
+    """Trace une homothétie de centre O et de rapport k.
+
+    Affiche la figure originale (orange), son image (bleu) et les droites
+    passant par le centre O et chaque couple (M, M').
+    """
+    if points is None:
+        points = [(1, 0), (3, 0), (2, 2)]
+    if labels is None:
+        labels = ['A', 'B', 'C']
+
+    ox, oy = center
+    # Image : M' = O + k*(M − O)
+    image_points = [
+        (ox + k * (px - ox), oy + k * (py - oy))
+        for (px, py) in points
+    ]
+    image_labels = [f"{lbl}'" for lbl in labels]
+
+    fig = go.Figure()
+
+    # Droites O → M → M' (en pointillés, tracées en premier pour rester en fond)
+    for (px, py), (ipx, ipy) in zip(points, image_points):
+        fig.add_trace(go.Scatter(
+            x=[ox, px, ipx], y=[oy, py, ipy],
+            mode='lines',
+            line=dict(color='#9E9E9E', width=1.2, dash='dash'),
+            showlegend=False,
+        ))
+
+    # Figure originale
+    closed_orig = points + [points[0]]
+    fig.add_trace(go.Scatter(
+        x=[p[0] for p in closed_orig],
+        y=[p[1] for p in closed_orig],
+        mode='lines+markers',
+        line=dict(color='#FF6B35', width=2.5),
+        marker=dict(size=9, color='#FF6B35'),
+        name='Figure originale',
+    ))
+    for (px, py), lbl in zip(points, labels):
+        fig.add_annotation(x=px, y=py, text=lbl, showarrow=False,
+                           font=dict(size=14, color='#FF6B35', family='bold'),
+                           xshift=12, yshift=12)
+
+    # Figure image
+    closed_img = image_points + [image_points[0]]
+    fig.add_trace(go.Scatter(
+        x=[p[0] for p in closed_img],
+        y=[p[1] for p in closed_img],
+        mode='lines+markers',
+        line=dict(color='#2196F3', width=2.5),
+        marker=dict(size=9, color='#2196F3'),
+        name=f'Image (k = {k})',
+    ))
+    for (px, py), lbl in zip(image_points, image_labels):
+        fig.add_annotation(x=px, y=py, text=lbl, showarrow=False,
+                           font=dict(size=14, color='#2196F3', family='bold'),
+                           xshift=12, yshift=12)
+
+    # Centre O
+    fig.add_trace(go.Scatter(
+        x=[ox], y=[oy], mode='markers+text',
+        marker=dict(size=12, color='black', symbol='x'),
+        text=['O'], textposition='top right',
+        textfont=dict(size=14, color='black'),
+        name='Centre O',
+    ))
+
+    # Bornes automatiques
+    all_pts = points + image_points + [center]
+    all_x = [p[0] for p in all_pts]
+    all_y = [p[1] for p in all_pts]
+    span = max(max(all_x) - min(all_x), max(all_y) - min(all_y), 1)
+    pad = span * 0.2 + 1.5
+    lo_x, hi_x = min(all_x) - pad, max(all_x) + pad
+    lo_y, hi_y = min(all_y) - pad, max(all_y) + pad
+
+    k_str = str(int(k)) if k == int(k) else str(k)
+    fig.update_layout(
+        **_base_layout(f'Homothétie — Centre O({ox}, {oy}), rapport k = {k_str}'),
+        showlegend=True,
+        legend=dict(x=0.01, y=0.99, bgcolor='rgba(255,255,255,0.7)'),
+        xaxis=dict(**_axis_cfg(lo_x, hi_x, 'x'), scaleanchor='y'),
+        yaxis=_axis_cfg(lo_y, hi_y, 'y'),
+    )
+    fig.add_hline(y=0, line_color='black', line_width=1.2)
+    fig.add_vline(x=0, line_color='black', line_width=1.2)
+    return fig
+
+
 def auto_draw_figure(detection: dict):
     """
     Trace automatiquement la figure détectée.
@@ -1088,6 +1200,21 @@ def auto_draw_figure(detection: dict):
         elif fig_type == 'polygone':
             n = params.get('n_sides', 5)
             return _create_polygon(n)
+
+        elif fig_type == 'homothetie':
+            coords = params.get('coords', {})
+            center = coords.get('O', (0, 0))
+            k = params.get('homothetie_k', 2.0)
+            pt_labels = [l for l in ['A', 'B', 'C'] if l in coords]
+            if len(pt_labels) >= 3:
+                pts = [coords[l] for l in pt_labels]
+            else:
+                pts = None
+                pt_labels = None
+            return _create_homothetie(
+                center=center, k=k,
+                points=pts, labels=pt_labels,
+            )
 
         elif fig_type == 'general':
             return _create_repere()
