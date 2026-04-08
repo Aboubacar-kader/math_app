@@ -366,7 +366,8 @@ def init_knowledge_base(force_reindex: bool = False):
 
     logger.info("Vérification de la base de connaissances...")
 
-    # Mode cloud : si Qdrant Cloud est configuré et déjà peuplé → pas d'indexation locale
+    # Mode cloud : si Qdrant Cloud est configuré, vérifier s'il y a des nouveaux fichiers
+    # à indexer avant de décider de sauter l'indexation.
     from config.settings import settings as _settings
     if _settings.QDRANT_URL:
         try:
@@ -374,12 +375,25 @@ def init_knowledge_base(force_reindex: bool = False):
                 collection_name=vectorstore_manager.collection_name
             ).count
             if count > 0:
+                # Vérifier s'il existe des fichiers non encore dans le cache
+                files_check = _collect_files()
+                cache_check, _ = _load_cache()
+                new_files = [
+                    f for f in files_check
+                    if cache_check.get(str(f)) != _get_file_hash(f)
+                ]
+                if not new_files:
+                    logger.info(
+                        "Mode cloud — %d vecteurs indexés, aucun nouveau fichier. Indexation ignorée.",
+                        count
+                    )
+                    return
                 logger.info(
-                    "Mode cloud — %d vecteurs déjà indexés dans Qdrant Cloud. Indexation locale ignorée.",
-                    count
+                    "Mode cloud — %d vecteurs existants + %d nouveau(x) fichier(s) à indexer.",
+                    count, len(new_files)
                 )
-                return
-            logger.info("Mode cloud — collection vide, indexation des fichiers locaux...")
+            else:
+                logger.info("Mode cloud — collection vide, indexation des fichiers locaux...")
         except Exception as e:
             logger.warning("Mode cloud — vérification collection échouée : %s", e)
 
