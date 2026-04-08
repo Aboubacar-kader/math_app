@@ -1141,8 +1141,10 @@ def _create_homothetie(center=(0, 0), k=2.0, points=None, labels=None) -> go.Fig
     lo_y, hi_y = min(all_y) - pad, max(all_y) + pad
 
     k_str = str(int(k)) if k == int(k) else str(k)
+    _layout = _base_layout(f'Homothétie — Centre O({ox}, {oy}), rapport k = {k_str}')
+    _layout.pop('showlegend', None)  # évite le conflit avec showlegend=True ci-dessous
     fig.update_layout(
-        **_base_layout(f'Homothétie — Centre O({ox}, {oy}), rapport k = {k_str}'),
+        **_layout,
         showlegend=True,
         legend=dict(x=0.01, y=0.99, bgcolor='rgba(255,255,255,0.7)'),
         xaxis=dict(**_axis_cfg(lo_x, hi_x, 'x'), scaleanchor='y'),
