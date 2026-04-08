@@ -6,7 +6,6 @@ Les références aux documents sont automatiquement supprimées
 
 import html as _html
 import streamlit as st
-import streamlit.components.v1 as st_components
 from datetime import datetime
 from services.rag_service import rag_service
 from services.voice_service import voice_service
@@ -1213,26 +1212,29 @@ def render_continuous_chat(
                 _process_question(section_key, question, rag_function_type, level, docs_snapshot)
 
     # Enter = soumettre, Shift+Enter = nouvelle ligne
-    st_components.html(f"""<script>
-    (function() {{
+    import base64 as _base64
+    _js_html = """<script>
+    (function() {
         var doc = window.parent.document;
-        function setup() {{
-            doc.querySelectorAll('textarea').forEach(function(ta) {{
+        function setup() {
+            doc.querySelectorAll('textarea').forEach(function(ta) {
                 if (ta.__enterBound) return;
                 ta.__enterBound = true;
-                ta.addEventListener('keydown', function(e) {{
-                    if (e.key === 'Enter' && !e.shiftKey) {{
+                ta.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         var btn = doc.querySelector('button[kind="primaryFormSubmit"]');
                         if (btn) btn.click();
-                    }}
-                }});
-            }});
-        }}
+                    }
+                });
+            });
+        }
         setup();
-        new MutationObserver(setup).observe(doc.body, {{childList: true, subtree: true}});
-    }})();
-    </script>""", height=1)
+        new MutationObserver(setup).observe(doc.body, {childList: true, subtree: true});
+    })();
+    </script>"""
+    _encoded = _base64.b64encode(_js_html.encode()).decode()
+    st.iframe(f"data:text/html;base64,{_encoded}", height=1)
 
     # Widget audio hors du form (contrainte Streamlit)
     if st.session_state.get(f'show_voice_{section_key}'):
