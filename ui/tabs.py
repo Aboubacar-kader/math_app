@@ -449,6 +449,16 @@ def render_chat_messages(section_key: str):
                     st.markdown(msg["content"].replace('\n', '  \n'))
                 else:
                     st.markdown(msg["content"])
+                    # Restituer la figure associée à ce message si elle existe
+                    if msg.get('figure'):
+                        fig_plot = auto_draw_figure(msg['figure'])
+                        if fig_plot:
+                            fig_display = msg['figure'].get('parameters', {}).get('function', '')
+                            if fig_display:
+                                st.markdown(f"**📈 Représentation graphique** — $f(x) = {fig_display}$")
+                            else:
+                                st.markdown(f"**📐 Figure — {msg['figure'].get('figure_type', '').capitalize()}**")
+                            st.plotly_chart(fig_plot, use_container_width=True)
         st.divider()
 
 
@@ -812,9 +822,15 @@ Le document fourni est le contexte de référence. Lis-le entièrement et répon
     ]))
     fig_detection = detect_figure_needed(detection_text)
     if fig_detection.get('needs_figure'):
-        st.session_state[f'figure_detection_{section_key}'] = fig_detection
-    else:
-        st.session_state.pop(f'figure_detection_{section_key}', None)
+        # Attacher la détection au dernier message assistant dans l'historique
+        # pour qu'elle survive aux questions suivantes.
+        history = st.session_state.get(history_key, [])
+        for msg in reversed(history):
+            if msg.get('role') == 'assistant':
+                msg['figure'] = fig_detection
+                break
+    # On ne supprime plus le state global — chaque message porte sa propre figure.
+    st.session_state.pop(f'figure_detection_{section_key}', None)
 
     # TTS automatique si mode vocal activé
     if st.session_state.get('setting_voice_mode') and last_llm_response:
@@ -868,18 +884,8 @@ def render_continuous_chat(
 
     render_chat_messages(section_key)
 
-    # Tracé automatique si un graphique a été détecté
-    fig_key = f'figure_detection_{section_key}'
-    if st.session_state.get(fig_key):
-        detection = st.session_state[fig_key]
-        fig_plot = auto_draw_figure(detection)
-        if fig_plot:
-            func_display = detection.get('parameters', {}).get('function', '')
-            if func_display:
-                st.markdown(f"**📈 Représentation graphique** — $f(x) = {func_display}$")
-            else:
-                st.markdown(f"**📐 Figure — {detection.get('figure_type', '').capitalize()}**")
-            st.plotly_chart(fig_plot, use_container_width=True)
+    # Les figures sont désormais attachées à chaque message assistant
+    # et rendues dans render_chat_messages() — plus de state global ici.
 
     # Tableau de variations (si détecté dans la dernière réponse)
     vt_key = f'variation_table_{section_key}'
