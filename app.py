@@ -413,8 +413,11 @@ def main():
     _run_knowledge_base_init()
     
     # Charger les styles CSS
-    with open('assets/styles.css', 'r', encoding='utf-8') as f:
-        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    try:
+        with open('assets/styles.css', 'r', encoding='utf-8') as f:
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+    except FileNotFoundError:
+        pass
     
     # SIDEBAR (se charge en même temps que le contenu)
     with st.sidebar:

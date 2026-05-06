@@ -53,12 +53,13 @@ class VectorStoreManager:
             raise RuntimeError("QDRANT_PATH en dehors du répertoire data/ — refusé.")
         try:
             return QdrantClient(path=str(qdrant_path))
-        except Exception:
+        except Exception as e:
+            logger.warning("Qdrant corrompu (%s) — réinitialisation du dossier.", e)
             try:
                 shutil.rmtree(qdrant_path, ignore_errors=True)
                 qdrant_path.mkdir(parents=True, exist_ok=True)
-            except Exception:
-                pass
+            except Exception as cleanup_err:
+                logger.error("Impossible de nettoyer le dossier Qdrant : %s", cleanup_err)
             return QdrantClient(path=str(qdrant_path))
     
     def _ensure_collection_exists(self):

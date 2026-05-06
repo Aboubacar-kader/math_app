@@ -323,7 +323,8 @@ JAMAIS de LaTeX ($...$, $$...$$, \\begin{...})
         user_content = f"❓ QUESTION : {question}"
         try:
             return self._call_llm(system_prompt, user_content)
-        except Exception:
+        except Exception as e:
+            logger.error("Échec LLM fallback pour la question '%s' : %s", question, e)
             return self._no_info_response(question)
 
     def _llm_fallback_definition(self, term: str, level: str) -> str:
@@ -363,7 +364,8 @@ JAMAIS de LaTeX ($...$, $$...$$, \\begin{{...}}).
         user_content = f"❓ TERME : {term}\n📊 NIVEAU : {level}"
         try:
             return self._call_llm(system_prompt, user_content)
-        except Exception:
+        except Exception as e:
+            logger.error("Échec LLM fallback définition pour '%s' : %s", term, e)
             return self._no_info_response(term)
 
     def _no_info_response(self, question: str) -> str:

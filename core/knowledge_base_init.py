@@ -52,8 +52,8 @@ def _load_cache() -> tuple[Dict[str, str], bool]:
                 )
                 return {}, True
             return {k: v for k, v in data.items() if k != "__version__"}, False
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("Impossible de lire le cache — ré-indexation complète : %s", e)
     return {}, False
 
 
@@ -83,7 +83,8 @@ def _get_file_hash(filepath: Path) -> str:
         with open(filepath, "rb") as f:
             for chunk in iter(lambda: f.read(8192), b""):
                 md5.update(chunk)
-    except Exception:
+    except Exception as e:
+        logger.warning("Impossible de calculer le hash de '%s' : %s", filepath, e)
         return ""
     return md5.hexdigest()
 
@@ -350,7 +351,7 @@ def _detect_level_from_path(filepath: Path) -> str:
         else:
             # Fallback : nom du dossier parent
             return filepath.parent.name
-    except:
+    except Exception:
         return filepath.parent.name
 
 

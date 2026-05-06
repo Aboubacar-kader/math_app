@@ -246,7 +246,7 @@ class DocumentProcessor:
             try:
                 file.seek(0)
                 return file.read().decode('latin-1')
-            except:
+            except Exception:
                 return ""
     
     def _extract_from_image(self, file) -> str:
